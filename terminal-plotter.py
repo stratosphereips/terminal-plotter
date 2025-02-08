@@ -32,7 +32,7 @@ def read_values(filename):
 
 def compute_running_average(data, avg_window):
     """Compute running average over data with a specified window.
-       For each index, average over the last 'avg_window' samples (or fewer if not available)."""
+       For each index, average over the last `avg_window` samples (or fewer if not available)."""
     if avg_window <= 1:
         return data[:]  # no smoothing if window is 1 or less
     running_avg = []
@@ -45,24 +45,16 @@ def compute_running_average(data, avg_window):
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Plot a moving window of data with running average and background toggle, with interactive control."
+        description="Plot a moving window of data with running average and interactive line toggles."
     )
-    parser.add_argument(
-        "-w", "--window", type=int, default=10,
-        help="Initial number of points in the moving window (default: 10)"
-    )
-    parser.add_argument(
-        "-f", "--file", type=str, default="data.txt",
-        help="Path to the data file (default: data.txt)"
-    )
-    parser.add_argument(
-        "-i", "--interval", type=float, default=2,
-        help="Refresh interval in seconds (default: 2)"
-    )
-    parser.add_argument(
-        "-a", "--avg-window", type=int, default=5,
-        help="Window size for running average (default: 5)"
-    )
+    parser.add_argument("-w", "--window", type=int, default=10,
+                        help="Initial number of points in the moving window (default: 10)")
+    parser.add_argument("-f", "--file", type=str, default="data.txt",
+                        help="Path to the data file (default: data.txt)")
+    parser.add_argument("-i", "--interval", type=float, default=2,
+                        help="Refresh interval in seconds (default: 2)")
+    parser.add_argument("-a", "--avg-window", type=int, default=5,
+                        help="Window size for running average (default: 5)")
     return parser.parse_args()
 
 def main():
@@ -72,16 +64,14 @@ def main():
     interval = args.interval
     avg_window = args.avg_window
 
-    # Use a boolean to track background mode; True means dark background.
-    dark_mode = True
+    # Booleans to control visibility of each plotted line.
+    show_raw = True       # raw data line visible by default
+    show_avg = True       # running average line visible by default
 
-    # offset is the starting index of the displayed window in the full data.
-    # When auto-scrolling, offset is updated to show the newest data.
     offset = None
-    # last_max_offset holds the maximum valid offset from the previous update.
     last_max_offset = None
 
-    # Save current terminal settings and set cbreak mode for immediate key reads.
+    # Set terminal to cbreak mode for immediate key reads.
     old_settings = termios.tcgetattr(sys.stdin)
     tty.setcbreak(sys.stdin.fileno())
 
@@ -96,7 +86,7 @@ def main():
         while True:
             key = get_key()
             if key:
-                # Main window adjustments
+                # Main window adjustments.
                 if key == 'k':
                     window_size += 1
                     update_plot = True
@@ -138,9 +128,12 @@ def main():
                 elif key == 'F':
                     avg_window = max(1, avg_window - 10)
                     update_plot = True
-                # Toggle background mode.
-                elif key == 'b':
-                    dark_mode = not dark_mode
+                # Toggle line visibility.
+                elif key == '1':
+                    show_raw = not show_raw
+                    update_plot = True
+                elif key == '2':
+                    show_avg = not show_avg
                     update_plot = True
                 elif key == 'q':
                     break
@@ -149,9 +142,7 @@ def main():
             if time.time() - last_update >= interval or update_plot:
                 data = read_values(filename)
                 if data:
-                    # Compute the maximum valid offset so that a full window is shown.
                     new_max_offset = max(0, len(data) - window_size)
-                    # Auto-scroll if offset is unset or currently at the end.
                     if offset is None or (last_max_offset is not None and offset == last_max_offset):
                         offset = new_max_offset
                     else:
@@ -159,40 +150,29 @@ def main():
                             offset = new_max_offset
                     last_max_offset = new_max_offset
 
-                    # Slice the window from the full data.
                     window_data = data[offset: offset + window_size]
                     x_vals = list(range(offset, offset + len(window_data)))
-
-                    # Compute the running average for the displayed window.
                     running_avg = compute_running_average(window_data, avg_window)
-
-                    # Set theme and colors based on background mode.
-                    if dark_mode:
-                        plt.theme("dark")
-                        raw_color = "cyan"
-                        avg_color = "yellow"
-                    else:
-                        plt.theme("light")
-                        raw_color = "blue"
-                        avg_color = "red"
 
                     plt.clear_figure()
                     plt.title("Moving Time Window Graph")
                     plt.xlabel("Index")
                     plt.ylabel("Value")
                     
-                    # Plot the raw data and the running average.
-                    plt.plot(x_vals, window_data, marker="dot", color=raw_color, label="Data")
-                    plt.plot(x_vals, running_avg, marker="dot", color=avg_color,
-                             label=f"Running Avg (window: {avg_window})")
+                    # Plot each line only if its toggle is active.
+                    if show_raw:
+                        plt.plot(x_vals, window_data, marker="dot", color="cyan", label="Data")
+                    if show_avg:
+                        plt.plot(x_vals, running_avg, marker="dot", color="red",
+                                 label=f"Running Avg (window: {avg_window})")
                     plt.grid(True)
                     
-                    # Prepare legend information.
-                    legend_text = [f"TW Length: {window_size}", f"Avg window: {avg_window}"]
-                    if dark_mode:
-                        legend_text.append("Background: Dark")
-                    else:
-                        legend_text.append("Background: Light")
+                    legend_text = [
+                        f"TW Length: {window_size}",
+                        f"Avg window: {avg_window}",
+                        f"Data: {'on' if show_raw else 'off'}",
+                        f"Running Avg: {'on' if show_avg else 'off'}"
+                    ]
                     if hasattr(plt, "legend"):
                         plt.legend(legend_text)
                     else:
@@ -201,9 +181,8 @@ def main():
                     plt.clear_figure()
                     plt.title("No data available in file")
 
-                # Build the plot as a string and update display without flickering.
                 plot_str = plt.build()
-                sys.stdout.write("\033[H")  # Move cursor to top-left.
+                sys.stdout.write("\033[H")
                 sys.stdout.write(plot_str)
                 sys.stdout.flush()
 
