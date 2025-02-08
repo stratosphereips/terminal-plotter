@@ -72,7 +72,7 @@ def main():
     interval = args.interval
     avg_window = args.avg_window
 
-    # offset: starting index of the displayed window in the full data.
+    # offset is the starting index of the displayed window in the full data.
     # When auto-scrolling, offset is updated to show the newest data.
     offset = None
     # last_max_offset holds the maximum valid offset from the previous update.
@@ -121,20 +121,32 @@ def main():
                     if offset is not None:
                         offset += 100
                     update_plot = True
+                # Running average window adjustments:
+                elif key == 'r':
+                    avg_window += 1
+                    update_plot = True
+                elif key == 'R':
+                    avg_window += 100
+                    update_plot = True
+                elif key == 'f':
+                    avg_window = max(1, avg_window - 1)
+                    update_plot = True
+                elif key == 'F':
+                    avg_window = max(1, avg_window - 100)
+                    update_plot = True
                 elif key == 'q':
                     break
 
-            # Update the plot if enough time has passed or a key forced an update.
+            # Update the plot if the refresh interval has passed or a key forced an update.
             if time.time() - last_update >= interval or update_plot:
                 data = read_values(filename)
                 if data:
                     # Compute the maximum valid offset so that a full window is shown.
                     new_max_offset = max(0, len(data) - window_size)
-                    # Auto-scroll: if offset is unset or currently at the end, update it.
+                    # Auto-scroll if offset is unset or currently at the end.
                     if offset is None or (last_max_offset is not None and offset == last_max_offset):
                         offset = new_max_offset
                     else:
-                        # Clamp offset to valid range.
                         if offset > new_max_offset:
                             offset = new_max_offset
                     last_max_offset = new_max_offset
@@ -157,13 +169,12 @@ def main():
                              label=f"Running Avg (window: {avg_window})")
                     plt.grid(True)
                     
-                    # Add legend displaying the TW length and running average window.
+                    # Prepare legend information.
+                    legend_text = [f"TW Length: {window_size}", f"Avg window: {avg_window}"]
                     if hasattr(plt, "legend"):
-                        plt.legend([f"TW Length: {window_size}",
-                                    f"Running Avg (window: {avg_window})"])
+                        plt.legend(legend_text)
                     else:
-                        plt.title("Moving Time Window Graph " +
-                                  f"(TW: {window_size}, Avg window: {avg_window})")
+                        plt.title("Moving Time Window Graph (" + ", ".join(legend_text) + ")")
                 else:
                     plt.clear_figure()
                     plt.title("No data available in file")
