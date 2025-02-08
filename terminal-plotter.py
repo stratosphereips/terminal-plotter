@@ -60,8 +60,8 @@ def parse_args():
         help="Refresh interval in seconds (default: 2)"
     )
     parser.add_argument(
-        "-a", "--avg-window", type=int, default=3,
-        help="Window size for running average (default: 3)"
+        "-a", "--avg-window", type=int, default=5,
+        help="Window size for running average (default: 5)"
     )
     return parser.parse_args()
 
@@ -126,13 +126,13 @@ def main():
                     avg_window += 1
                     update_plot = True
                 elif key == 'R':
-                    avg_window += 10  # increase by 10 instead of 100
+                    avg_window += 10  # increase by 10
                     update_plot = True
                 elif key == 'f':
                     avg_window = max(1, avg_window - 1)
                     update_plot = True
                 elif key == 'F':
-                    avg_window = max(1, avg_window - 10)  # decrease by 10 instead of 100
+                    avg_window = max(1, avg_window - 10)  # decrease by 10
                     update_plot = True
                 elif key == 'q':
                     break
