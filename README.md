@@ -60,7 +60,7 @@ Set the refresh interval in seconds (default: 2 seconds).
 ### Run the script
 First, Run the script with a 20-point window, reading from mydata.txt, and updating every 1.5 seconds:
 
-    `python a.py --window 20 --file mydata.txt --interval 1.5`
+  `python a.py -w 20 -f mydata.txt -i 1.5`
 
 
 ### Feeding Data to the Plot
@@ -69,10 +69,10 @@ The script reads numeric values from the data file—one value per line. To see 
 
 Test by appending single values by hand:
 
-    ```bash
-    echo "3.14" >> data.txt
-    echo "4" >> data.txt
-    ```
+  ```bash
+  echo "3.14" >> data.txt
+  echo "4" >> data.txt
+  ```
 
 Test of plotting a ping command
 
