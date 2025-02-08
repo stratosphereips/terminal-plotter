@@ -53,6 +53,7 @@ def parse_args():
                         help="Path to the data file (default: data.txt)")
     parser.add_argument("-i", "--interval", type=float, default=2,
                         help="Refresh interval in seconds (default: 2)")
+    # The default for running average window is explicitly set to 5.
     parser.add_argument("-a", "--avg-window", type=int, default=5,
                         help="Window size for running average (default: 5)")
     return parser.parse_args()
@@ -62,11 +63,11 @@ def main():
     filename = args.file
     window_size = args.window
     interval = args.interval
-    avg_window = args.avg_window
+    avg_window = args.avg_window  # This should start as 5 by default.
 
     # Booleans to control visibility of each plotted line.
-    show_raw = True       # raw data line visible by default
-    show_avg = True       # running average line visible by default
+    show_raw = True       # Raw data line visible by default.
+    show_avg = True       # Running average line visible by default.
 
     offset = None
     last_max_offset = None
