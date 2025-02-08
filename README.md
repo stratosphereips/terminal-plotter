@@ -118,3 +118,8 @@ Test by appending single values by hand:
 Test of plotting a ping command
 
     `ping www.toyota.co |awk '{print $7; fflush()}'|awk -F'=' '{print $2; fflush()}' >> data.txt`
+
+Test of plotting CPU usage (macos):
+
+    `while true; do ps -A -o %cpu | awk '{sum+=$1} END {print sum}' >> data.txt; sleep 1; done`
+
