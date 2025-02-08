@@ -2,7 +2,7 @@
 
 Terminal Plotter is script that reads numeric data from a file (by default `data.txt`) and displays it as a live-updating plot in the terminal using [plotext](https://pypi.org/project/plotext/). The plot shows a moving time window (TW) of the data, and you can interactively adjust the window's size and position using keyboard controls.
 
-<img width="1414" alt="image" src="https://github.com/user-attachments/assets/67a9179e-de13-44e3-9583-aa98f39b38b2" />
+<img width="1408" alt="image" src="https://github.com/user-attachments/assets/fd7218a5-e979-43ab-bbec-5e0be94a39b5" />
 
 
 ## Features
