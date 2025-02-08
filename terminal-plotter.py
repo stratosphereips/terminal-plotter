@@ -45,7 +45,7 @@ def compute_running_average(data, avg_window):
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Plot a moving window of data with running average from a file with interactive control."
+        description="Plot a moving window of data with running average and background toggle, with interactive control."
     )
     parser.add_argument(
         "-w", "--window", type=int, default=10,
@@ -72,6 +72,9 @@ def main():
     interval = args.interval
     avg_window = args.avg_window
 
+    # Use a boolean to track background mode; True means dark background.
+    dark_mode = True
+
     # offset is the starting index of the displayed window in the full data.
     # When auto-scrolling, offset is updated to show the newest data.
     offset = None
@@ -93,6 +96,7 @@ def main():
         while True:
             key = get_key()
             if key:
+                # Main window adjustments
                 if key == 'k':
                     window_size += 1
                     update_plot = True
@@ -121,18 +125,22 @@ def main():
                     if offset is not None:
                         offset += 100
                     update_plot = True
-                # Running average window adjustments:
+                # Running average window adjustments.
                 elif key == 'r':
                     avg_window += 1
                     update_plot = True
                 elif key == 'R':
-                    avg_window += 10  # increase by 10
+                    avg_window += 10
                     update_plot = True
                 elif key == 'f':
                     avg_window = max(1, avg_window - 1)
                     update_plot = True
                 elif key == 'F':
-                    avg_window = max(1, avg_window - 10)  # decrease by 10
+                    avg_window = max(1, avg_window - 10)
+                    update_plot = True
+                # Toggle background mode.
+                elif key == 'b':
+                    dark_mode = not dark_mode
                     update_plot = True
                 elif key == 'q':
                     break
@@ -158,19 +166,33 @@ def main():
                     # Compute the running average for the displayed window.
                     running_avg = compute_running_average(window_data, avg_window)
 
+                    # Set theme and colors based on background mode.
+                    if dark_mode:
+                        plt.theme("dark")
+                        raw_color = "cyan"
+                        avg_color = "yellow"
+                    else:
+                        plt.theme("light")
+                        raw_color = "blue"
+                        avg_color = "red"
+
                     plt.clear_figure()
                     plt.title("Moving Time Window Graph")
                     plt.xlabel("Index")
                     plt.ylabel("Value")
                     
-                    # Plot the raw data (cyan) and the running average (red).
-                    plt.plot(x_vals, window_data, marker="dot", color="cyan", label="Data")
-                    plt.plot(x_vals, running_avg, marker="dot", color="red",
+                    # Plot the raw data and the running average.
+                    plt.plot(x_vals, window_data, marker="dot", color=raw_color, label="Data")
+                    plt.plot(x_vals, running_avg, marker="dot", color=avg_color,
                              label=f"Running Avg (window: {avg_window})")
                     plt.grid(True)
                     
                     # Prepare legend information.
                     legend_text = [f"TW Length: {window_size}", f"Avg window: {avg_window}"]
+                    if dark_mode:
+                        legend_text.append("Background: Dark")
+                    else:
+                        legend_text.append("Background: Light")
                     if hasattr(plt, "legend"):
                         plt.legend(legend_text)
                     else:
