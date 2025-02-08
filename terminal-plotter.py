@@ -30,9 +30,22 @@ def read_values(filename):
         print(f"File '{filename}' not found.")
     return y_vals
 
+def compute_running_average(data, avg_window):
+    """Compute running average over data with a specified window.
+       For each index, average over the last 'avg_window' samples (or fewer if not available)."""
+    if avg_window <= 1:
+        return data[:]  # no smoothing if window is 1 or less
+    running_avg = []
+    for i in range(len(data)):
+        start = max(0, i - avg_window + 1)
+        window = data[start:i+1]
+        avg = sum(window) / len(window)
+        running_avg.append(avg)
+    return running_avg
+
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Plot a moving window of data from a file with interactive control."
+        description="Plot a moving window of data with running average from a file with interactive control."
     )
     parser.add_argument(
         "-w", "--window", type=int, default=10,
@@ -46,6 +59,10 @@ def parse_args():
         "-i", "--interval", type=float, default=2,
         help="Refresh interval in seconds (default: 2)"
     )
+    parser.add_argument(
+        "-a", "--avg-window", type=int, default=3,
+        help="Window size for running average (default: 3)"
+    )
     return parser.parse_args()
 
 def main():
@@ -53,8 +70,9 @@ def main():
     filename = args.file
     window_size = args.window
     interval = args.interval
+    avg_window = args.avg_window
 
-    # offset is the starting index of the window in the data.
+    # offset: starting index of the displayed window in the full data.
     # When auto-scrolling, offset is updated to show the newest data.
     offset = None
     # last_max_offset holds the maximum valid offset from the previous update.
@@ -112,7 +130,7 @@ def main():
                 if data:
                     # Compute the maximum valid offset so that a full window is shown.
                     new_max_offset = max(0, len(data) - window_size)
-                    # If offset is not set or we are auto-scrolling, update offset.
+                    # Auto-scroll: if offset is unset or currently at the end, update it.
                     if offset is None or (last_max_offset is not None and offset == last_max_offset):
                         offset = new_max_offset
                     else:
@@ -121,24 +139,31 @@ def main():
                             offset = new_max_offset
                     last_max_offset = new_max_offset
 
+                    # Slice the window from the full data.
                     window_data = data[offset: offset + window_size]
                     x_vals = list(range(offset, offset + len(window_data)))
+
+                    # Compute the running average for the displayed window.
+                    running_avg = compute_running_average(window_data, avg_window)
 
                     plt.clear_figure()
                     plt.title("Moving Time Window Graph")
                     plt.xlabel("Index")
                     plt.ylabel("Value")
-                    plt.plot(x_vals, window_data, marker="dot", color="cyan")
+                    
+                    # Plot the raw data (cyan) and the running average (red).
+                    plt.plot(x_vals, window_data, marker="dot", color="cyan", label="Data")
+                    plt.plot(x_vals, running_avg, marker="dot", color="red",
+                             label=f"Running Avg (window: {avg_window})")
                     plt.grid(True)
-
-                    # Prepare legend text showing TW length.
-                    legend_text = f"TW Length: {window_size}"
-                    # If the plot library supports legend(), use it.
+                    
+                    # Add legend displaying the TW length and running average window.
                     if hasattr(plt, "legend"):
-                        plt.legend([legend_text])
+                        plt.legend([f"TW Length: {window_size}",
+                                    f"Running Avg (window: {avg_window})"])
                     else:
-                        # Otherwise, append the legend info to the title.
-                        plt.title("Moving Time Window Graph (" + legend_text + ")")
+                        plt.title("Moving Time Window Graph " +
+                                  f"(TW: {window_size}, Avg window: {avg_window})")
                 else:
                     plt.clear_figure()
                     plt.title("No data available in file")
