@@ -126,13 +126,13 @@ def main():
                     avg_window += 1
                     update_plot = True
                 elif key == 'R':
-                    avg_window += 100
+                    avg_window += 10  # increase by 10 instead of 100
                     update_plot = True
                 elif key == 'f':
                     avg_window = max(1, avg_window - 1)
                     update_plot = True
                 elif key == 'F':
-                    avg_window = max(1, avg_window - 100)
+                    avg_window = max(1, avg_window - 10)  # decrease by 10 instead of 100
                     update_plot = True
                 elif key == 'q':
                     break
