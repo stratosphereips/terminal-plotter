@@ -53,7 +53,6 @@ def parse_args():
                         help="Path to the data file (default: data.txt)")
     parser.add_argument("-i", "--interval", type=float, default=2,
                         help="Refresh interval in seconds (default: 2)")
-    # The default for running average window is explicitly set to 5.
     parser.add_argument("-a", "--avg-window", type=int, default=5,
                         help="Window size for running average (default: 5)")
     return parser.parse_args()
@@ -63,11 +62,14 @@ def main():
     filename = args.file
     window_size = args.window
     interval = args.interval
-    avg_window = args.avg_window  # This should start as 5 by default.
+    avg_window = args.avg_window
 
     # Booleans to control visibility of each plotted line.
     show_raw = True       # Raw data line visible by default.
     show_avg = True       # Running average line visible by default.
+
+    # Plot style control
+    plot_style = 'dots'  # Options: 'dots', 'line'
 
     offset = None
     last_max_offset = None
@@ -136,6 +138,10 @@ def main():
                 elif key == '2':
                     show_avg = not show_avg
                     update_plot = True
+                # Toggle plot style
+                elif key == 's':
+                    plot_style = 'line' if plot_style == 'dots' else 'dots'
+                    update_plot = True
                 elif key == 'q':
                     break
 
@@ -160,17 +166,25 @@ def main():
                     plt.xlabel("Index")
                     plt.ylabel("Value")
                     
-                    # Plot each line only if its toggle is active.
+                    # Plotting with configurable style
                     if show_raw:
-                        plt.plot(x_vals, window_data, marker="dot", color="cyan", label="Data")
+                        if plot_style == 'dots':
+                            plt.plot(x_vals, window_data, marker="dot", color="cyan", label="Data")
+                        else:
+                            plt.plot(x_vals, window_data, color="cyan", label="Data")
                     if show_avg:
-                        plt.plot(x_vals, running_avg, marker="dot", color="red",
-                                 label=f"Running Avg (window: {avg_window})")
+                        if plot_style == 'dots':
+                            plt.plot(x_vals, running_avg, marker="dot", color="red",
+                                     label=f"Running Avg (window: {avg_window})")
+                        else:
+                            plt.plot(x_vals, running_avg, color="red",
+                                     label=f"Running Avg (window: {avg_window})")
                     plt.grid(True)
                     
                     legend_text = [
                         f"TW Length: {window_size}",
                         f"Avg window: {avg_window}",
+                        f"Plot Style: {plot_style}",
                         f"Data: {'on' if show_raw else 'off'}",
                         f"Running Avg: {'on' if show_avg else 'off'}"
                     ]
@@ -196,4 +210,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
