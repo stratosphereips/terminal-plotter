@@ -303,12 +303,12 @@ def main():
                         else:
                             plt.plot(x_vals, running_avg, color="red",
                                      label=f"Running Avg (window: {avg_window})")
-                    # Overlay raw anomalies.
+                    # Overlay raw anomalies as points.
                     if anomaly_x:
-                        plt.plot(anomaly_x, anomaly_y, marker="x", color="yellow", label="Raw AD")
-                    # Overlay running average anomalies.
+                        plt.scatter(anomaly_x, anomaly_y, color="yellow", marker="x", label="Raw AD")
+                    # Overlay running average anomalies as points.
                     if ra_anomaly_x:
-                        plt.plot(ra_anomaly_x, ra_anomaly_y, marker="o", color="magenta", label="RA AD")
+                        plt.scatter(ra_anomaly_x, ra_anomaly_y, color="magenta", marker="o", label="RA AD")
                     
                     plt.grid(True)
                     
