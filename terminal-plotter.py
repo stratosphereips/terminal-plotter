@@ -158,7 +158,7 @@ def main():
                     anomaly_window_size += 1
                     update_plot = True
                 elif key == 'd':  # Decrease AD window size by 1
-                    anomaly_window_size = max(1, anomaly_window_size - 1)
+                    anomaly_window_size = max(2, anomaly_window_size - 1)  # minimum 2 points required
                     update_plot = True
                 elif key == 'q':
                     break
@@ -182,8 +182,8 @@ def main():
                     # --- Anomaly Detection on the Main Signal ---
                     anomaly_x = []
                     anomaly_y = []
-                    # Use the most recent anomaly_window_size points from the raw data.
-                    if len(data) >= anomaly_window_size:
+                    # Only proceed if there are enough data points for AD
+                    if len(data) >= anomaly_window_size and anomaly_window_size >= 2:
                         ad_data = data[-anomaly_window_size:]
                         ad_x_all = list(range(len(data) - anomaly_window_size, len(data)))
                         mean_ad = sum(ad_data) / len(ad_data)
