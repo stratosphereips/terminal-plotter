@@ -5,6 +5,7 @@ import tty
 import termios
 import argparse
 import plotext as plt
+import statistics  # For anomaly detection computations
 
 def get_key():
     """Non-blocking read of a single key from stdin."""
@@ -161,6 +162,20 @@ def main():
                     x_vals = list(range(offset, offset + len(window_data)))
                     running_avg = compute_running_average(window_data, avg_window)
 
+                    # --- Anomaly Detection on the Main Signal ---
+                    # Using the raw window data as baseline:
+                    anomaly_threshold = 3  # multiplier for standard deviation
+                    anomaly_x = []
+                    anomaly_y = []
+                    if len(window_data) > 1:
+                        mean_data = sum(window_data) / len(window_data)
+                        stdev_data = statistics.stdev(window_data)
+                        for i, val in enumerate(window_data):
+                            if stdev_data > 0 and abs(val - mean_data) > anomaly_threshold * stdev_data:
+                                anomaly_x.append(x_vals[i])
+                                anomaly_y.append(val)
+                    # -------------------------
+
                     plt.clear_figure()
                     plt.title("Moving Time Window Graph")
                     plt.xlabel("Index")
@@ -179,6 +194,10 @@ def main():
                         else:
                             plt.plot(x_vals, running_avg, color="red",
                                      label=f"Running Avg (window: {avg_window})")
+                    # Plot anomalies on the main signal
+                    if anomaly_x:
+                        plt.plot(anomaly_x, anomaly_y, marker="x", color="yellow", label="Anomaly")
+                    
                     plt.grid(True)
                     
                     legend_text = [
@@ -210,3 +229,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
