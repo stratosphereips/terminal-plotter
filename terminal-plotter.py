@@ -73,9 +73,10 @@ def main():
     stored_anomalies = set()    # Store indices of data points flagged as anomalies
     ad_params_changed = False   # Flag to trigger full re-computation
 
-    # Booleans to control visibility of each plotted line.
+    # Booleans to control visibility of plotted lines.
     show_raw = True       # Raw data line visible by default.
     show_avg = True       # Running average line visible by default.
+    show_anomalies = True # Anomalies are shown by default.
 
     # Plot style control
     plot_style = 'dots'  # Options: 'dots', 'line'
@@ -147,6 +148,9 @@ def main():
                 elif key == '2':
                     show_avg = not show_avg
                     update_plot = True
+                elif key == '3':
+                    show_anomalies = not show_anomalies
+                    update_plot = True
                 # Toggle plot style.
                 elif key == 's':
                     plot_style = 'line' if plot_style == 'dots' else 'dots'
@@ -217,10 +221,11 @@ def main():
                     # For plotting, show anomalies that fall within the current window.
                     anomaly_x = []
                     anomaly_y = []
-                    for idx in stored_anomalies:
-                        if offset <= idx < offset + window_size:
-                            anomaly_x.append(idx)
-                            anomaly_y.append(data[idx])
+                    if show_anomalies:
+                        for idx in stored_anomalies:
+                            if offset <= idx < offset + window_size:
+                                anomaly_x.append(idx)
+                                anomaly_y.append(data[idx])
 
                     plt.clear_figure()
                     plt.title("Moving Time Window Graph")
@@ -240,7 +245,7 @@ def main():
                         else:
                             plt.plot(x_vals, running_avg, color="red",
                                      label=f"Running Avg (window: {avg_window})")
-                    # Overlay anomalies.
+                    # Overlay anomalies if enabled.
                     if anomaly_x:
                         plt.plot(anomaly_x, anomaly_y, marker="x", color="yellow", label="Anomaly")
                     
@@ -254,7 +259,8 @@ def main():
                         f"Data: {'on' if show_raw else 'off'}",
                         f"Running Avg: {'on' if show_avg else 'off'}",
                         f"AD Threshold: {anomaly_threshold}",
-                        f"AD Window: {anomaly_window_size}"
+                        f"AD Window: {anomaly_window_size}",
+                        f"Show Anomalies: {'on' if show_anomalies else 'off'}"
                     ]
                     if hasattr(plt, "legend"):
                         plt.legend(legend_text)
