@@ -65,6 +65,10 @@ def main():
     interval = args.interval
     avg_window = args.avg_window
 
+    # Additional parameters for anomaly detection:
+    anomaly_threshold = 3       # Multiplier for standard deviation
+    anomaly_window_size = 10    # Window size (number of recent points) used for anomaly detection
+
     # Booleans to control visibility of each plotted line.
     show_raw = True       # Raw data line visible by default.
     show_avg = True       # Running average line visible by default.
@@ -139,9 +143,22 @@ def main():
                 elif key == '2':
                     show_avg = not show_avg
                     update_plot = True
-                # Toggle plot style
+                # Toggle plot style.
                 elif key == 's':
                     plot_style = 'line' if plot_style == 'dots' else 'dots'
+                    update_plot = True
+                # New hotkeys for anomaly detection adjustments:
+                elif key == 't':  # Increase AD threshold multiplier by 1
+                    anomaly_threshold += 1
+                    update_plot = True
+                elif key == 'g':  # Decrease AD threshold multiplier by 1
+                    anomaly_threshold = max(1, anomaly_threshold - 1)
+                    update_plot = True
+                elif key == 'e':  # Increase AD window size by 1
+                    anomaly_window_size += 1
+                    update_plot = True
+                elif key == 'd':  # Decrease AD window size by 1
+                    anomaly_window_size = max(1, anomaly_window_size - 1)
                     update_plot = True
                 elif key == 'q':
                     break
@@ -163,17 +180,21 @@ def main():
                     running_avg = compute_running_average(window_data, avg_window)
 
                     # --- Anomaly Detection on the Main Signal ---
-                    # Using the raw window data as baseline:
-                    anomaly_threshold = 3  # multiplier for standard deviation
                     anomaly_x = []
                     anomaly_y = []
-                    if len(window_data) > 1:
-                        mean_data = sum(window_data) / len(window_data)
-                        stdev_data = statistics.stdev(window_data)
-                        for i, val in enumerate(window_data):
-                            if stdev_data > 0 and abs(val - mean_data) > anomaly_threshold * stdev_data:
-                                anomaly_x.append(x_vals[i])
-                                anomaly_y.append(val)
+                    # Use the most recent anomaly_window_size points from the raw data.
+                    if len(data) >= anomaly_window_size:
+                        ad_data = data[-anomaly_window_size:]
+                        ad_x_all = list(range(len(data) - anomaly_window_size, len(data)))
+                        mean_ad = sum(ad_data) / len(ad_data)
+                        stdev_ad = statistics.stdev(ad_data)
+                        for i, val in enumerate(ad_data):
+                            if stdev_ad > 0 and abs(val - mean_ad) > anomaly_threshold * stdev_ad:
+                                # Only plot the anomaly if it falls in the current plot window.
+                                global_index = ad_x_all[i]
+                                if offset <= global_index < offset + window_size:
+                                    anomaly_x.append(global_index)
+                                    anomaly_y.append(val)
                     # -------------------------
 
                     plt.clear_figure()
@@ -181,7 +202,7 @@ def main():
                     plt.xlabel("Index")
                     plt.ylabel("Value")
                     
-                    # Plotting with configurable style
+                    # Plotting with configurable style.
                     if show_raw:
                         if plot_style == 'dots':
                             plt.plot(x_vals, window_data, marker="dot", color="cyan", label="Data")
@@ -194,18 +215,21 @@ def main():
                         else:
                             plt.plot(x_vals, running_avg, color="red",
                                      label=f"Running Avg (window: {avg_window})")
-                    # Plot anomalies on the main signal
+                    # Plot anomalies on the main signal.
                     if anomaly_x:
                         plt.plot(anomaly_x, anomaly_y, marker="x", color="yellow", label="Anomaly")
                     
                     plt.grid(True)
                     
+                    # Append AD parameters to the legend.
                     legend_text = [
                         f"TW Length: {window_size}",
                         f"Avg window: {avg_window}",
                         f"Plot Style: {plot_style}",
                         f"Data: {'on' if show_raw else 'off'}",
-                        f"Running Avg: {'on' if show_avg else 'off'}"
+                        f"Running Avg: {'on' if show_avg else 'off'}",
+                        f"AD Threshold: {anomaly_threshold}",
+                        f"AD Window: {anomaly_window_size}"
                     ]
                     if hasattr(plt, "legend"):
                         plt.legend(legend_text)
