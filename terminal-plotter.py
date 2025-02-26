@@ -7,6 +7,9 @@ import argparse
 import plotext as plt
 import statistics  # For anomaly detection computations
 
+# Limit the number of points to process for full AD recomputation to improve speed.
+AD_MAX_POINTS = 1000
+
 def get_key():
     """Non-blocking read of a single key from stdin."""
     dr, _, _ = select.select([sys.stdin], [], [], 0)
@@ -158,7 +161,7 @@ def main():
                 elif key == '3':
                     show_anomalies = not show_anomalies
                     update_plot = True
-                # New hotkey for toggling running average anomalies.
+                # Toggle running average anomaly visibility.
                 elif key == '4':
                     show_ra_anomalies = not show_ra_anomalies
                     update_plot = True
@@ -222,9 +225,15 @@ def main():
                     running_avg_all = compute_running_average(data, avg_window)
 
                     # --- Raw Signal Anomaly Detection ---
+                    # If data is huge, limit processing to the most recent AD_MAX_POINTS.
+                    if len(data) > AD_MAX_POINTS:
+                        ad_start_index = len(data) - AD_MAX_POINTS
+                    else:
+                        ad_start_index = 0
+
                     if ad_params_changed:
                         stored_anomalies = set()
-                        for i in range(anomaly_window_size, len(data)):
+                        for i in range(max(anomaly_window_size, ad_start_index + anomaly_window_size), len(data)):
                             baseline = data[i - anomaly_window_size:i]
                             if len(baseline) >= 2:
                                 mean_baseline = sum(baseline) / len(baseline)
@@ -245,9 +254,14 @@ def main():
                     # -------------------------
 
                     # --- Running Average Anomaly Detection ---
+                    if len(running_avg_all) > AD_MAX_POINTS:
+                        ra_start_index = len(running_avg_all) - AD_MAX_POINTS
+                    else:
+                        ra_start_index = 0
+
                     if ra_ad_params_changed:
                         stored_ra_anomalies = set()
-                        for i in range(ra_ad_window_size, len(running_avg_all)):
+                        for i in range(max(ra_ad_window_size, ra_start_index + ra_ad_window_size), len(running_avg_all)):
                             baseline = running_avg_all[i - ra_ad_window_size:i]
                             if len(baseline) >= 2:
                                 mean_baseline = sum(baseline) / len(baseline)
@@ -312,7 +326,6 @@ def main():
                     
                     plt.grid(True)
                     
-                    # Append AD parameters to the legend.
                     legend_text = [
                         f"TW Length: {window_size}",
                         f"Avg window: {avg_window}",
