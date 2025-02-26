@@ -73,6 +73,9 @@ def main():
     ra_ad_threshold = 3         # Multiplier for running average AD
     ra_ad_window_size = 10      # Number of points used for computing the baseline in RA AD
 
+    # Global flag to enable/disable anomaly detection.
+    compute_ad = True
+
     # Booleans to control visibility of plotted lines.
     show_raw = True       # Raw data line visible by default.
     show_avg = True       # Running average line visible by default.
@@ -158,6 +161,10 @@ def main():
                 elif key == 's':
                     plot_style = 'line' if plot_style == 'dots' else 'dots'
                     update_plot = True
+                # Toggle entire AD computation.
+                elif key == 'a':
+                    compute_ad = not compute_ad
+                    update_plot = True
                 # Hotkeys for raw signal AD adjustments:
                 elif key == 't':  # Increase raw AD threshold multiplier by 1
                     anomaly_threshold += 1
@@ -207,7 +214,7 @@ def main():
                     # --- Raw Signal AD on Visible Window ---
                     raw_anomaly_x = []
                     raw_anomaly_y = []
-                    if len(window_data) >= anomaly_window_size:
+                    if compute_ad and len(window_data) >= anomaly_window_size:
                         for i in range(anomaly_window_size - 1, len(window_data)):
                             baseline = window_data[i - anomaly_window_size + 1 : i+1]
                             if len(baseline) >= 2:
@@ -221,7 +228,7 @@ def main():
                     # --- Running Average AD on Visible Window ---
                     ra_anomaly_x = []
                     ra_anomaly_y = []
-                    if len(running_avg) >= ra_ad_window_size:
+                    if compute_ad and len(running_avg) >= ra_ad_window_size:
                         for i in range(ra_ad_window_size - 1, len(running_avg)):
                             baseline = running_avg[i - ra_ad_window_size + 1 : i+1]
                             if len(baseline) >= 2:
@@ -235,7 +242,7 @@ def main():
                     plt.clear_figure()
                     plt.title("Moving Time Window Graph (" +
                               f"TW: {window_size}, Avg: {avg_window}, Raw Thresh: {anomaly_threshold}, Raw Win: {anomaly_window_size}, " +
-                              f"RA Thresh: {ra_ad_threshold}, RA Win: {ra_ad_window_size})")
+                              f"RA Thresh: {ra_ad_threshold}, RA Win: {ra_ad_window_size}, AD: {'ON' if compute_ad else 'OFF'})")
                     plt.xlabel("Index")
                     plt.ylabel("Value")
                     
@@ -259,7 +266,7 @@ def main():
                     
                     plt.grid(True)
                     
-                    # (Legend not supported, so legend text is in the title.)
+                    # (Legend not supported; parameters shown in title.)
                 else:
                     plt.clear_figure()
                     plt.title("No data available in file")
