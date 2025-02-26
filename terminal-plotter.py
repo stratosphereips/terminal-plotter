@@ -187,20 +187,20 @@ def main():
                     ad_params_changed = True
                     update_plot = True
                 # Hotkeys for running average AD adjustments:
-                elif key == 'z':  # Increase RA AD window size by 1
-                    ra_ad_window_size += 1
-                    ra_ad_params_changed = True
-                    update_plot = True
-                elif key == 'x':  # Decrease RA AD window size by 1 (min 2)
+                elif key == 'z':  # Decrease RA AD window size by 1 (min 2)
                     ra_ad_window_size = max(2, ra_ad_window_size - 1)
                     ra_ad_params_changed = True
                     update_plot = True
-                elif key == 'c':  # Increase RA AD threshold multiplier by 1
-                    ra_ad_threshold += 1
+                elif key == 'x':  # Increase RA AD window size by 1
+                    ra_ad_window_size += 1
                     ra_ad_params_changed = True
                     update_plot = True
-                elif key == 'v':  # Decrease RA AD threshold multiplier by 1
+                elif key == 'c':  # Decrease RA AD threshold multiplier by 1
                     ra_ad_threshold = max(1, ra_ad_threshold - 1)
+                    ra_ad_params_changed = True
+                    update_plot = True
+                elif key == 'v':  # Increase RA AD threshold multiplier by 1
+                    ra_ad_threshold += 1
                     ra_ad_params_changed = True
                     update_plot = True
                 elif key == 'q':
