@@ -114,18 +114,17 @@ def main():
     last_update = time.time()
     update_plot = False
 
-    # Build our creative one-line legend for the hotkeys.
+    # Build our one-line hotkeys legend.
     def legend_text():
         ad_state = "ADON" if compute_ad else "ADOF"
-        return ("Hotkeys: k:WIN+ | K:SHFT++ | j:WIN- | J:SHFT-- | h:LEFT | l:RGHT | H:FSTL | L:FSTR | " +
-                "r:AVG+ | R:SHFT++ | f:AVG- | F:SHFT-- | .:PLOT | a:" + ad_state + " | " +
-                "t:RTH+ | g:RTH- | e:RAW+ | d:RAW- | " +
-                "z:RAWD- | x:RAWD+ | c:RAT- | v:RAT+ | " +
+        return ("(SHFT:++ for big jumps) Hotkeys: k:WIN+ | j:WIN- | H:WIN++ | J:WIN-- | "
+                "h:LEFT | l:RGHT | r:AVG+ | f:AVG- | .:PLOT | a:" + ad_state + " | "
+                "t:RTH+ | g:RTH- | e:RAW+ | d:RAW- | z:RAWD- | x:RAWD+ | c:RAT- | v:RAT+ | "
                 "s:SAVE | 1:RAWL | 2:AVGL | 3:RADA | 4:RAAD | q:QUIT")
-
-    # Build a top-left legend for the data lines.
+    
+    # Top-left legend for the plotted lines.
     top_left_legend = "Legend: Data(CYN) | Avg(RED) | Raw AD(ORN) | RA AD(DGN)"
-
+    
     try:
         while True:
             key = get_key()
@@ -284,13 +283,14 @@ def main():
                                     ra_anomaly_y.append(running_avg[i])
                     # -------------------------
 
-                    # Set title with a top-left legend.
-                    plt.clear_figure()
-                    plt.title("Moving Time Window Graph (" +
+                    # Build the title with a top legend.
+                    title_str = ("Moving Time Window Graph (" +
                               f"TW:{window_size}, AVG:{avg_window}, RTH:{anomaly_threshold}, RWND:{anomaly_window_size}, " +
                               f"RAT:{ra_ad_threshold}, RAWD:{ra_ad_window_size}, AD:{'ADON' if compute_ad else 'ADOF'}, " +
                               f"Style:{plot_style})\n" +
                               top_left_legend)
+                    plt.clear_figure()
+                    plt.title(title_str)
                     plt.xlabel("Index")
                     plt.ylabel("Value")
                     
@@ -311,7 +311,7 @@ def main():
                     
                     plt.grid(True)
                     
-                    # Append our one-line hotkeys legend as a footer.
+                    # Append the one-line hotkeys legend as a footer.
                     plot_str = plt.build().rstrip("\n") + "\n" + legend_text()
                 else:
                     plt.clear_figure()
