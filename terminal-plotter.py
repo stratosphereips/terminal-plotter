@@ -85,19 +85,19 @@ def main():
 
     # Load config from YAML (if available) and use defaults otherwise.
     config = load_config()
-    window_size      = config.get("window_size", args.window)
-    avg_window       = config.get("avg_window", args.avg_window)
-    anomaly_threshold= config.get("anomaly_threshold", 3)
+    window_size         = config.get("window_size", args.window)
+    avg_window          = config.get("avg_window", args.avg_window)
+    anomaly_threshold   = config.get("anomaly_threshold", 3)
     anomaly_window_size = config.get("anomaly_window_size", 10)
-    ra_ad_threshold  = config.get("ra_ad_threshold", 3)
-    ra_ad_window_size= config.get("ra_ad_window_size", 10)
-    show_raw         = config.get("show_raw", True)
-    show_avg         = config.get("show_avg", True)
-    show_anomalies   = config.get("show_anomalies", True)
-    show_ra_anomalies= config.get("show_ra_anomalies", True)
+    ra_ad_threshold     = config.get("ra_ad_threshold", 3)
+    ra_ad_window_size   = config.get("ra_ad_window_size", 10)
+    show_raw            = config.get("show_raw", True)
+    show_avg            = config.get("show_avg", True)
+    show_anomalies      = config.get("show_anomalies", True)
+    show_ra_anomalies   = config.get("show_ra_anomalies", True)
     # Default now is "line"
-    plot_style       = config.get("plot_style", "line")
-    compute_ad       = config.get("compute_ad", True)
+    plot_style          = config.get("plot_style", "line")
+    compute_ad          = config.get("compute_ad", True)
     
     interval = args.interval
 
@@ -113,6 +113,15 @@ def main():
 
     last_update = time.time()
     update_plot = False
+
+    # Build our creative one-line legend.
+    def legend_text():
+        ad_state = "ADON" if compute_ad else "ADOF"
+        return ("Legend: k:WIN+ | j:WIN- | h:LEFT | l:RGHT | H:FSTL | L:FSTR | "
+                "r:AVG+ | f:AVG- | .:PLOT | a:" + ad_state + " | "
+                "t:RTH+ | g:RTH- | e:RAW+ | d:RAW- | "
+                "z:RAWD- | x:RAWD+ | c:RAT- | v:RAT+ | "
+                "s:SAVE | 1:RAWL | 2:AVGL | 3:RADA | 4:RAAD | q:QUIT")
 
     try:
         while True:
@@ -173,7 +182,7 @@ def main():
                 elif key == '4':
                     show_ra_anomalies = not show_ra_anomalies
                     update_plot = True
-                # Toggle plot style using hotkey '.' 
+                # Toggle plot style using hotkey '.'
                 elif key == '.':
                     plot_style = 'line' if plot_style == 'dots' else 'dots'
                     update_plot = True
@@ -209,7 +218,6 @@ def main():
                     update_plot = True
                 # Save config hotkey.
                 elif key == 's':
-                    # Save current configuration (except dynamic offset)
                     config = {
                         "window_size": window_size,
                         "avg_window": avg_window,
@@ -229,7 +237,6 @@ def main():
                 elif key == 'q':
                     break
 
-            # Update the plot if refresh interval has passed or a key forced an update.
             if time.time() - last_update >= interval or update_plot:
                 data = read_values(filename)
                 if data:
@@ -276,9 +283,9 @@ def main():
 
                     plt.clear_figure()
                     plt.title("Moving Time Window Graph (" +
-                              f"TW: {window_size}, Avg: {avg_window}, Raw Thresh: {anomaly_threshold}, Raw Win: {anomaly_window_size}, " +
-                              f"RA Thresh: {ra_ad_threshold}, RA Win: {ra_ad_window_size}, AD: {'ON' if compute_ad else 'OFF'}, " +
-                              f"Style: {plot_style})")
+                              f"TW:{window_size}, AVG:{avg_window}, RTH:{anomaly_threshold}, RWND:{anomaly_window_size}, " +
+                              f"RAT:{ra_ad_threshold}, RAWD:{ra_ad_window_size}, AD:{'ADON' if compute_ad else 'ADOF'}, " +
+                              f"Style:{plot_style})")
                     plt.xlabel("Index")
                     plt.ylabel("Value")
                     
@@ -298,11 +305,14 @@ def main():
                         plt.scatter(ra_anomaly_x, ra_anomaly_y, color="dark_green", marker="●")
                     
                     plt.grid(True)
+                    
+                    # Build the plot string and append a single-line legend at the bottom.
+                    plot_str = plt.build().rstrip("\n") + "\n" + legend_text()
                 else:
                     plt.clear_figure()
                     plt.title("No data available in file")
-
-                plot_str = plt.build()
+                    plot_str = plt.build()
+                
                 sys.stdout.write("\033[H")
                 sys.stdout.write(plot_str)
                 sys.stdout.flush()
