@@ -114,14 +114,17 @@ def main():
     last_update = time.time()
     update_plot = False
 
-    # Build our creative one-line legend.
+    # Build our creative one-line legend for the hotkeys.
     def legend_text():
         ad_state = "ADON" if compute_ad else "ADOF"
-        return ("Legend: k:WIN+ | j:WIN- | h:LEFT | l:RGHT | H:FSTL | L:FSTR | "
-                "r:AVG+ | f:AVG- | .:PLOT | a:" + ad_state + " | "
-                "t:RTH+ | g:RTH- | e:RAW+ | d:RAW- | "
-                "z:RAWD- | x:RAWD+ | c:RAT- | v:RAT+ | "
+        return ("Hotkeys: k:WIN+ | K:SHFT++ | j:WIN- | J:SHFT-- | h:LEFT | l:RGHT | H:FSTL | L:FSTR | " +
+                "r:AVG+ | R:SHFT++ | f:AVG- | F:SHFT-- | .:PLOT | a:" + ad_state + " | " +
+                "t:RTH+ | g:RTH- | e:RAW+ | d:RAW- | " +
+                "z:RAWD- | x:RAWD+ | c:RAT- | v:RAT+ | " +
                 "s:SAVE | 1:RAWL | 2:AVGL | 3:RADA | 4:RAAD | q:QUIT")
+
+    # Build a top-left legend for the data lines.
+    top_left_legend = "Legend: Data(CYN) | Avg(RED) | Raw AD(ORN) | RA AD(DGN)"
 
     try:
         while True:
@@ -281,11 +284,13 @@ def main():
                                     ra_anomaly_y.append(running_avg[i])
                     # -------------------------
 
+                    # Set title with a top-left legend.
                     plt.clear_figure()
                     plt.title("Moving Time Window Graph (" +
                               f"TW:{window_size}, AVG:{avg_window}, RTH:{anomaly_threshold}, RWND:{anomaly_window_size}, " +
                               f"RAT:{ra_ad_threshold}, RAWD:{ra_ad_window_size}, AD:{'ADON' if compute_ad else 'ADOF'}, " +
-                              f"Style:{plot_style})")
+                              f"Style:{plot_style})\n" +
+                              top_left_legend)
                     plt.xlabel("Index")
                     plt.ylabel("Value")
                     
@@ -306,7 +311,7 @@ def main():
                     
                     plt.grid(True)
                     
-                    # Build the plot string and append a single-line legend at the bottom.
+                    # Append our one-line hotkeys legend as a footer.
                     plot_str = plt.build().rstrip("\n") + "\n" + legend_text()
                 else:
                     plt.clear_figure()
