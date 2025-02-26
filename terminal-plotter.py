@@ -6,6 +6,28 @@ import termios
 import argparse
 import plotext as plt
 import statistics  # For anomaly detection computations
+import yaml        # Requires PyYAML to be installed
+import os
+
+CONFIG_FILE = "config.yaml"
+
+def load_config():
+    """Load configuration from YAML file if it exists."""
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, "r") as f:
+            try:
+                config = yaml.safe_load(f)
+                if config is None:
+                    return {}
+                return config
+            except yaml.YAMLError as e:
+                print("Error loading config:", e)
+    return {}
+
+def save_config(config):
+    """Save configuration dictionary to YAML file."""
+    with open(CONFIG_FILE, "w") as f:
+        yaml.safe_dump(config, f)
 
 def get_key():
     """Non-blocking read of a single key from stdin."""
@@ -32,8 +54,7 @@ def read_values(filename):
     return y_vals
 
 def compute_running_average(data, avg_window):
-    """Compute running average over data with a specified window.
-       For each index, average over the last `avg_window` samples (or fewer if not available)."""
+    """Compute running average over data with a specified window."""
     if avg_window <= 1:
         return data[:]  # no smoothing if window is 1 or less
     running_avg = []
@@ -61,38 +82,31 @@ def parse_args():
 def main():
     args = parse_args()
     filename = args.file
-    window_size = args.window
+
+    # Load config from YAML (if available) and use defaults otherwise.
+    config = load_config()
+    window_size      = config.get("window_size", args.window)
+    avg_window       = config.get("avg_window", args.avg_window)
+    anomaly_threshold= config.get("anomaly_threshold", 3)
+    anomaly_window_size = config.get("anomaly_window_size", 10)
+    ra_ad_threshold  = config.get("ra_ad_threshold", 3)
+    ra_ad_window_size= config.get("ra_ad_window_size", 10)
+    show_raw         = config.get("show_raw", True)
+    show_avg         = config.get("show_avg", True)
+    show_anomalies   = config.get("show_anomalies", True)
+    show_ra_anomalies= config.get("show_ra_anomalies", True)
+    plot_style       = config.get("plot_style", "dots")
+    compute_ad       = config.get("compute_ad", True)
+    
     interval = args.interval
-    avg_window = args.avg_window
 
-    # AD parameters for the raw signal:
-    anomaly_threshold = 3       # Multiplier for standard deviation
-    anomaly_window_size = 10    # Number of points used for computing the baseline in raw AD
-
-    # AD parameters for the running average:
-    ra_ad_threshold = 3         # Multiplier for running average AD
-    ra_ad_window_size = 10      # Number of points used for computing the baseline in RA AD
-
-    # Global flag to enable/disable anomaly detection.
-    compute_ad = True
-
-    # Booleans to control visibility of plotted lines.
-    show_raw = True       # Raw data line visible by default.
-    show_avg = True       # Running average line visible by default.
-    show_anomalies = True # Raw anomalies visible by default.
-    show_ra_anomalies = True  # Running average anomalies visible by default.
-
-    # Plot style control
-    plot_style = 'dots'  # Options: 'dots', 'line'
-
+    # (Offset is dynamic; not saved in config)
     offset = None
     last_max_offset = None
 
     # Set terminal to cbreak mode for immediate key reads.
     old_settings = termios.tcgetattr(sys.stdin)
     tty.setcbreak(sys.stdin.fileno())
-
-    # Clear the terminal once at startup.
     sys.stdout.write("\033[2J")
     sys.stdout.flush()
 
@@ -158,7 +172,8 @@ def main():
                 elif key == '4':
                     show_ra_anomalies = not show_ra_anomalies
                     update_plot = True
-                elif key == 's':
+                # Toggle plot style (now on 'p' to avoid conflict with save config).
+                elif key == 'p':
                     plot_style = 'line' if plot_style == 'dots' else 'dots'
                     update_plot = True
                 # Toggle entire AD computation.
@@ -166,35 +181,54 @@ def main():
                     compute_ad = not compute_ad
                     update_plot = True
                 # Hotkeys for raw signal AD adjustments:
-                elif key == 't':  # Increase raw AD threshold multiplier by 1
+                elif key == 't':
                     anomaly_threshold += 1
                     update_plot = True
-                elif key == 'g':  # Decrease raw AD threshold multiplier by 1
+                elif key == 'g':
                     anomaly_threshold = max(1, anomaly_threshold - 1)
                     update_plot = True
-                elif key == 'e':  # Increase raw AD window size by 1
+                elif key == 'e':
                     anomaly_window_size += 1
                     update_plot = True
-                elif key == 'd':  # Decrease raw AD window size by 1 (min 2)
+                elif key == 'd':
                     anomaly_window_size = max(2, anomaly_window_size - 1)
                     update_plot = True
                 # Hotkeys for running average AD adjustments:
-                elif key == 'z':  # Decrease RA AD window size by 1 (min 2)
+                elif key == 'z':
                     ra_ad_window_size = max(2, ra_ad_window_size - 1)
                     update_plot = True
-                elif key == 'x':  # Increase RA AD window size by 1
+                elif key == 'x':
                     ra_ad_window_size += 1
                     update_plot = True
-                elif key == 'c':  # Decrease RA AD threshold multiplier by 1
+                elif key == 'c':
                     ra_ad_threshold = max(1, ra_ad_threshold - 1)
                     update_plot = True
-                elif key == 'v':  # Increase RA AD threshold multiplier by 1
+                elif key == 'v':
                     ra_ad_threshold += 1
+                    update_plot = True
+                # Save config hotkey.
+                elif key == 's':
+                    # Save current configuration (except dynamic offset)
+                    config = {
+                        "window_size": window_size,
+                        "avg_window": avg_window,
+                        "anomaly_threshold": anomaly_threshold,
+                        "anomaly_window_size": anomaly_window_size,
+                        "ra_ad_threshold": ra_ad_threshold,
+                        "ra_ad_window_size": ra_ad_window_size,
+                        "show_raw": show_raw,
+                        "show_avg": show_avg,
+                        "show_anomalies": show_anomalies,
+                        "show_ra_anomalies": show_ra_anomalies,
+                        "plot_style": plot_style,
+                        "compute_ad": compute_ad
+                    }
+                    save_config(config)
                     update_plot = True
                 elif key == 'q':
                     break
 
-            # Update the plot if the refresh interval has passed or a key forced an update.
+            # Update the plot if refresh interval has passed or a key forced an update.
             if time.time() - last_update >= interval or update_plot:
                 data = read_values(filename)
                 if data:
@@ -206,7 +240,7 @@ def main():
                             offset = new_max_offset
                     last_max_offset = new_max_offset
 
-                    # Select only the visible points.
+                    # Visible subset of data.
                     window_data = data[offset: offset + window_size]
                     x_vals = list(range(offset, offset + len(window_data)))
                     running_avg = compute_running_average(window_data, avg_window)
@@ -239,6 +273,7 @@ def main():
                                     ra_anomaly_y.append(running_avg[i])
                     # -------------------------
 
+                    # Build plot.
                     plt.clear_figure()
                     plt.title("Moving Time Window Graph (" +
                               f"TW: {window_size}, Avg: {avg_window}, Raw Thresh: {anomaly_threshold}, Raw Win: {anomaly_window_size}, " +
@@ -246,27 +281,22 @@ def main():
                     plt.xlabel("Index")
                     plt.ylabel("Value")
                     
-                    # Plot the raw data and its running average.
                     if show_raw:
                         if plot_style == 'dots':
-                            plt.plot(x_vals, window_data, marker="dot", color="cyan", label="Data")
+                            plt.plot(x_vals, window_data, marker="dot", color="cyan")
                         else:
-                            plt.plot(x_vals, window_data, color="cyan", label="Data")
+                            plt.plot(x_vals, window_data, color="cyan")
                     if show_avg:
                         if plot_style == 'dots':
-                            plt.plot(x_vals, running_avg, marker="dot", color="red", label=f"Running Avg ({avg_window})")
+                            plt.plot(x_vals, running_avg, marker="dot", color="red")
                         else:
-                            plt.plot(x_vals, running_avg, color="red", label=f"Running Avg ({avg_window})")
-                    # Overlay raw anomalies as larger, brighter markers in orange.
+                            plt.plot(x_vals, running_avg, color="red")
                     if show_anomalies and raw_anomaly_x:
-                        plt.scatter(raw_anomaly_x, raw_anomaly_y, color="orange", marker="■", label="Raw AD")
-                    # Overlay running average anomalies as larger, brighter markers in dark green.
+                        plt.scatter(raw_anomaly_x, raw_anomaly_y, color="orange", marker="■")
                     if show_ra_anomalies and ra_anomaly_x:
-                        plt.scatter(ra_anomaly_x, ra_anomaly_y, color="dark_green", marker="●", label="RA AD")
+                        plt.scatter(ra_anomaly_x, ra_anomaly_y, color="dark_green", marker="●")
                     
                     plt.grid(True)
-                    
-                    # (Legend not supported; parameters shown in title.)
                 else:
                     plt.clear_figure()
                     plt.title("No data available in file")
