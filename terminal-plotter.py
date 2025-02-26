@@ -95,7 +95,8 @@ def main():
     show_avg         = config.get("show_avg", True)
     show_anomalies   = config.get("show_anomalies", True)
     show_ra_anomalies= config.get("show_ra_anomalies", True)
-    plot_style       = config.get("plot_style", "dots")
+    # Default now is "line"
+    plot_style       = config.get("plot_style", "line")
     compute_ad       = config.get("compute_ad", True)
     
     interval = args.interval
@@ -172,8 +173,8 @@ def main():
                 elif key == '4':
                     show_ra_anomalies = not show_ra_anomalies
                     update_plot = True
-                # Toggle plot style (now on 'p' to avoid conflict with save config).
-                elif key == 'p':
+                # Toggle plot style using hotkey '.' 
+                elif key == '.':
                     plot_style = 'line' if plot_style == 'dots' else 'dots'
                     update_plot = True
                 # Toggle entire AD computation.
@@ -273,11 +274,11 @@ def main():
                                     ra_anomaly_y.append(running_avg[i])
                     # -------------------------
 
-                    # Build plot.
                     plt.clear_figure()
                     plt.title("Moving Time Window Graph (" +
                               f"TW: {window_size}, Avg: {avg_window}, Raw Thresh: {anomaly_threshold}, Raw Win: {anomaly_window_size}, " +
-                              f"RA Thresh: {ra_ad_threshold}, RA Win: {ra_ad_window_size}, AD: {'ON' if compute_ad else 'OFF'})")
+                              f"RA Thresh: {ra_ad_threshold}, RA Win: {ra_ad_window_size}, AD: {'ON' if compute_ad else 'OFF'}, " +
+                              f"Style: {plot_style})")
                     plt.xlabel("Index")
                     plt.ylabel("Value")
                     
