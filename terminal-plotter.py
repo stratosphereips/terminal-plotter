@@ -7,9 +7,6 @@ import argparse
 import plotext as plt
 import statistics  # For anomaly detection computations
 
-# Limit the number of points to process for full AD recomputation to improve speed.
-AD_MAX_POINTS = 1000
-
 def get_key():
     """Non-blocking read of a single key from stdin."""
     dr, _, _ = select.select([sys.stdin], [], [], 0)
@@ -68,19 +65,13 @@ def main():
     interval = args.interval
     avg_window = args.avg_window
 
-    # Additional parameters for anomaly detection on the raw signal:
+    # AD parameters for the raw signal:
     anomaly_threshold = 3       # Multiplier for standard deviation
-    anomaly_window_size = 10    # AD window size: number of recent points used for detection
+    anomaly_window_size = 10    # Number of points used for computing the baseline in raw AD
 
-    # Additional parameters for anomaly detection on the running average:
+    # AD parameters for the running average:
     ra_ad_threshold = 3         # Multiplier for running average AD
-    ra_ad_window_size = 10      # Window size for running average AD
-
-    # Variables to persist anomalies and track AD parameter changes.
-    stored_anomalies = set()    # For raw data AD (indices)
-    stored_ra_anomalies = set() # For running average AD (indices)
-    ad_params_changed = False   # Flag for raw AD full recomputation
-    ra_ad_params_changed = False# Flag for running average AD full recomputation
+    ra_ad_window_size = 10      # Number of points used for computing the baseline in RA AD
 
     # Booleans to control visibility of plotted lines.
     show_raw = True       # Raw data line visible by default.
@@ -161,47 +152,37 @@ def main():
                 elif key == '3':
                     show_anomalies = not show_anomalies
                     update_plot = True
-                # Toggle running average anomaly visibility.
                 elif key == '4':
                     show_ra_anomalies = not show_ra_anomalies
                     update_plot = True
-                # Toggle plot style.
                 elif key == 's':
                     plot_style = 'line' if plot_style == 'dots' else 'dots'
                     update_plot = True
                 # Hotkeys for raw signal AD adjustments:
                 elif key == 't':  # Increase raw AD threshold multiplier by 1
                     anomaly_threshold += 1
-                    ad_params_changed = True
                     update_plot = True
                 elif key == 'g':  # Decrease raw AD threshold multiplier by 1
                     anomaly_threshold = max(1, anomaly_threshold - 1)
-                    ad_params_changed = True
                     update_plot = True
                 elif key == 'e':  # Increase raw AD window size by 1
                     anomaly_window_size += 1
-                    ad_params_changed = True
                     update_plot = True
                 elif key == 'd':  # Decrease raw AD window size by 1 (min 2)
                     anomaly_window_size = max(2, anomaly_window_size - 1)
-                    ad_params_changed = True
                     update_plot = True
                 # Hotkeys for running average AD adjustments:
                 elif key == 'z':  # Decrease RA AD window size by 1 (min 2)
                     ra_ad_window_size = max(2, ra_ad_window_size - 1)
-                    ra_ad_params_changed = True
                     update_plot = True
                 elif key == 'x':  # Increase RA AD window size by 1
                     ra_ad_window_size += 1
-                    ra_ad_params_changed = True
                     update_plot = True
                 elif key == 'c':  # Decrease RA AD threshold multiplier by 1
                     ra_ad_threshold = max(1, ra_ad_threshold - 1)
-                    ra_ad_params_changed = True
                     update_plot = True
                 elif key == 'v':  # Increase RA AD threshold multiplier by 1
                     ra_ad_threshold += 1
-                    ra_ad_params_changed = True
                     update_plot = True
                 elif key == 'q':
                     break
@@ -218,93 +199,47 @@ def main():
                             offset = new_max_offset
                     last_max_offset = new_max_offset
 
+                    # Select only the visible points.
                     window_data = data[offset: offset + window_size]
                     x_vals = list(range(offset, offset + len(window_data)))
                     running_avg = compute_running_average(window_data, avg_window)
-                    # Compute running average for the full dataset (for RA AD)
-                    running_avg_all = compute_running_average(data, avg_window)
 
-                    # --- Raw Signal Anomaly Detection ---
-                    # If data is huge, limit processing to the most recent AD_MAX_POINTS.
-                    if len(data) > AD_MAX_POINTS:
-                        ad_start_index = len(data) - AD_MAX_POINTS
-                    else:
-                        ad_start_index = 0
-
-                    if ad_params_changed:
-                        stored_anomalies = set()
-                        for i in range(max(anomaly_window_size, ad_start_index + anomaly_window_size), len(data)):
-                            baseline = data[i - anomaly_window_size:i]
+                    # --- Raw Signal AD on Visible Window ---
+                    raw_anomaly_x = []
+                    raw_anomaly_y = []
+                    if len(window_data) >= anomaly_window_size:
+                        for i in range(anomaly_window_size - 1, len(window_data)):
+                            baseline = window_data[i - anomaly_window_size + 1 : i+1]
                             if len(baseline) >= 2:
                                 mean_baseline = sum(baseline) / len(baseline)
                                 stdev_baseline = statistics.stdev(baseline)
-                                if stdev_baseline > 0 and abs(data[i] - mean_baseline) > anomaly_threshold * stdev_baseline:
-                                    stored_anomalies.add(i)
-                        ad_params_changed = False
-                    else:
-                        if len(data) >= anomaly_window_size:
-                            ad_data = data[-anomaly_window_size:]
-                            ad_x_all = list(range(len(data) - anomaly_window_size, len(data)))
-                            mean_ad = sum(ad_data) / len(ad_data)
-                            stdev_ad = statistics.stdev(ad_data) if len(ad_data) > 1 else 0
-                            for j, val in enumerate(ad_data):
-                                idx = ad_x_all[j]
-                                if stdev_ad > 0 and abs(val - mean_ad) > anomaly_threshold * stdev_ad:
-                                    stored_anomalies.add(idx)
+                                if stdev_baseline > 0 and abs(window_data[i] - mean_baseline) > anomaly_threshold * stdev_baseline:
+                                    raw_anomaly_x.append(offset + i)
+                                    raw_anomaly_y.append(window_data[i])
                     # -------------------------
 
-                    # --- Running Average Anomaly Detection ---
-                    if len(running_avg_all) > AD_MAX_POINTS:
-                        ra_start_index = len(running_avg_all) - AD_MAX_POINTS
-                    else:
-                        ra_start_index = 0
-
-                    if ra_ad_params_changed:
-                        stored_ra_anomalies = set()
-                        for i in range(max(ra_ad_window_size, ra_start_index + ra_ad_window_size), len(running_avg_all)):
-                            baseline = running_avg_all[i - ra_ad_window_size:i]
-                            if len(baseline) >= 2:
-                                mean_baseline = sum(baseline) / len(baseline)
-                                stdev_baseline = statistics.stdev(baseline)
-                                if stdev_baseline > 0 and abs(running_avg_all[i] - mean_baseline) > ra_ad_threshold * stdev_baseline:
-                                    stored_ra_anomalies.add(i)
-                        ra_ad_params_changed = False
-                    else:
-                        if len(running_avg_all) >= ra_ad_window_size:
-                            ra_window = running_avg_all[-ra_ad_window_size:]
-                            ra_indices = list(range(len(running_avg_all) - ra_ad_window_size, len(running_avg_all)))
-                            mean_ra = sum(ra_window) / len(ra_window)
-                            stdev_ra = statistics.stdev(ra_window) if len(ra_window) > 1 else 0
-                            for j, val in enumerate(ra_window):
-                                idx = ra_indices[j]
-                                if stdev_ra > 0 and abs(val - mean_ra) > ra_ad_threshold * stdev_ra:
-                                    stored_ra_anomalies.add(idx)
-                    # -------------------------
-
-                    # For plotting, show raw anomalies that fall within the current window.
-                    anomaly_x = []
-                    anomaly_y = []
-                    if show_anomalies:
-                        for idx in stored_anomalies:
-                            if offset <= idx < offset + window_size:
-                                anomaly_x.append(idx)
-                                anomaly_y.append(data[idx])
-                    
-                    # For plotting, show running average anomalies in the current window.
+                    # --- Running Average AD on Visible Window ---
                     ra_anomaly_x = []
                     ra_anomaly_y = []
-                    if show_ra_anomalies:
-                        for idx in stored_ra_anomalies:
-                            if offset <= idx < offset + window_size:
-                                ra_anomaly_x.append(idx)
-                                ra_anomaly_y.append(running_avg_all[idx])
+                    if len(running_avg) >= ra_ad_window_size:
+                        for i in range(ra_ad_window_size - 1, len(running_avg)):
+                            baseline = running_avg[i - ra_ad_window_size + 1 : i+1]
+                            if len(baseline) >= 2:
+                                mean_baseline = sum(baseline) / len(baseline)
+                                stdev_baseline = statistics.stdev(baseline)
+                                if stdev_baseline > 0 and abs(running_avg[i] - mean_baseline) > ra_ad_threshold * stdev_baseline:
+                                    ra_anomaly_x.append(offset + i)
+                                    ra_anomaly_y.append(running_avg[i])
+                    # -------------------------
 
                     plt.clear_figure()
-                    plt.title("Moving Time Window Graph")
+                    plt.title("Moving Time Window Graph (" +
+                              f"TW: {window_size}, Avg: {avg_window}, Raw Thresh: {anomaly_threshold}, Raw Win: {anomaly_window_size}, " +
+                              f"RA Thresh: {ra_ad_threshold}, RA Win: {ra_ad_window_size})")
                     plt.xlabel("Index")
                     plt.ylabel("Value")
                     
-                    # Plot the raw data and its running average (for the current window).
+                    # Plot the raw data and its running average.
                     if show_raw:
                         if plot_style == 'dots':
                             plt.plot(x_vals, window_data, marker="dot", color="cyan", label="Data")
@@ -312,37 +247,19 @@ def main():
                             plt.plot(x_vals, window_data, color="cyan", label="Data")
                     if show_avg:
                         if plot_style == 'dots':
-                            plt.plot(x_vals, running_avg, marker="dot", color="red",
-                                     label=f"Running Avg (window: {avg_window})")
+                            plt.plot(x_vals, running_avg, marker="dot", color="red", label=f"Running Avg ({avg_window})")
                         else:
-                            plt.plot(x_vals, running_avg, color="red",
-                                     label=f"Running Avg (window: {avg_window})")
-                    # Overlay raw anomalies as larger, brighter points in orange.
-                    if anomaly_x:
-                        plt.scatter(anomaly_x, anomaly_y, color="orange", marker="■", label="Raw AD")
-                    # Overlay running average anomalies as larger, brighter points in dark green.
-                    if ra_anomaly_x:
+                            plt.plot(x_vals, running_avg, color="red", label=f"Running Avg ({avg_window})")
+                    # Overlay raw anomalies as larger, brighter markers in orange.
+                    if show_anomalies and raw_anomaly_x:
+                        plt.scatter(raw_anomaly_x, raw_anomaly_y, color="orange", marker="■", label="Raw AD")
+                    # Overlay running average anomalies as larger, brighter markers in dark green.
+                    if show_ra_anomalies and ra_anomaly_x:
                         plt.scatter(ra_anomaly_x, ra_anomaly_y, color="dark_green", marker="●", label="RA AD")
                     
                     plt.grid(True)
                     
-                    legend_text = [
-                        f"TW Length: {window_size}",
-                        f"Avg window: {avg_window}",
-                        f"Plot Style: {plot_style}",
-                        f"Data: {'on' if show_raw else 'off'}",
-                        f"Running Avg: {'on' if show_avg else 'off'}",
-                        f"Raw AD Threshold: {anomaly_threshold}",
-                        f"Raw AD Window: {anomaly_window_size}",
-                        f"Show Raw AD: {'on' if show_anomalies else 'off'}",
-                        f"RA AD Threshold: {ra_ad_threshold}",
-                        f"RA AD Window: {ra_ad_window_size}",
-                        f"Show RA AD: {'on' if show_ra_anomalies else 'off'}"
-                    ]
-                    if hasattr(plt, "legend"):
-                        plt.legend(legend_text)
-                    else:
-                        plt.title("Moving Time Window Graph (" + ", ".join(legend_text) + ")")
+                    # (Legend not supported, so legend text is in the title.)
                 else:
                     plt.clear_figure()
                     plt.title("No data available in file")
