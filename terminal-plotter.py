@@ -12,32 +12,26 @@ import os
 CONFIG_FILE = "config.yaml"
 
 def load_config():
-    """Load configuration from YAML file if it exists."""
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "r") as f:
             try:
                 config = yaml.safe_load(f)
-                if config is None:
-                    return {}
-                return config
+                return config if config is not None else {}
             except yaml.YAMLError as e:
                 print("Error loading config:", e)
     return {}
 
 def save_config(config):
-    """Save configuration dictionary to YAML file."""
     with open(CONFIG_FILE, "w") as f:
         yaml.safe_dump(config, f)
 
 def get_key():
-    """Non-blocking read of a single key from stdin."""
     dr, _, _ = select.select([sys.stdin], [], [], 0)
     if dr:
         return sys.stdin.read(1)
     return None
 
 def read_values(filename):
-    """Read a list of y-values (one per line) from the file."""
     y_vals = []
     try:
         with open(filename, "r") as file:
@@ -54,15 +48,13 @@ def read_values(filename):
     return y_vals
 
 def compute_running_average(data, avg_window):
-    """Compute running average over data with a specified window."""
     if avg_window <= 1:
-        return data[:]  # no smoothing if window is 1 or less
+        return data[:]
     running_avg = []
     for i in range(len(data)):
         start = max(0, i - avg_window + 1)
         window = data[start:i+1]
-        avg = sum(window) / len(window)
-        running_avg.append(avg)
+        running_avg.append(sum(window) / len(window))
     return running_avg
 
 def parse_args():
@@ -83,7 +75,7 @@ def main():
     args = parse_args()
     filename = args.file
 
-    # Load config from YAML (if available) and use defaults otherwise.
+    # Load configuration from YAML (if available)
     config = load_config()
     window_size         = config.get("window_size", args.window)
     avg_window          = config.get("avg_window", args.avg_window)
@@ -95,16 +87,17 @@ def main():
     show_avg            = config.get("show_avg", True)
     show_anomalies      = config.get("show_anomalies", True)
     show_ra_anomalies   = config.get("show_ra_anomalies", True)
-    # Default now is "line"
     plot_style          = config.get("plot_style", "line")
     compute_ad          = config.get("compute_ad", True)
     
     interval = args.interval
 
-    # (Offset is dynamic; not saved in config)
     offset = None
     last_max_offset = None
 
+    # Define the top-left legend for the plotted lines.
+    top_left_legend = "Legend: Data(CYN) | Avg(RED) | Raw AD(ORN) | RA AD(DGN)"
+    
     # Set terminal to cbreak mode for immediate key reads.
     old_settings = termios.tcgetattr(sys.stdin)
     tty.setcbreak(sys.stdin.fileno())
@@ -114,22 +107,18 @@ def main():
     last_update = time.time()
     update_plot = False
 
-    # Build our one-line hotkeys legend.
-    def legend_text():
+    # Build hotkeys legend footer.
+    def hotkeys_legend():
         ad_state = "ADON" if compute_ad else "ADOF"
         return ("(SHFT:++ for big jumps) Hotkeys: k:WIN+ | j:WIN- | H:WIN++ | J:WIN-- | "
                 "h:LEFT | l:RGHT | r:AVG+ | f:AVG- | .:PLOT | a:" + ad_state + " | "
                 "t:RTH+ | g:RTH- | e:RAW+ | d:RAW- | z:RAWD- | x:RAWD+ | c:RAT- | v:RAT+ | "
                 "s:SAVE | 1:RAWL | 2:AVGL | 3:RADA | 4:RAAD | q:QUIT")
     
-    # Top-left legend for the plotted lines.
-    top_left_legend = "Legend: Data(CYN) | Avg(RED) | Raw AD(ORN) | RA AD(DGN)"
-    
     try:
         while True:
             key = get_key()
             if key:
-                # Main window adjustments.
                 if key == 'k':
                     window_size += 1
                     update_plot = True
@@ -158,7 +147,6 @@ def main():
                     if offset is not None:
                         offset += 100
                     update_plot = True
-                # Running average window adjustments.
                 elif key == 'r':
                     avg_window += 1
                     update_plot = True
@@ -171,7 +159,6 @@ def main():
                 elif key == 'F':
                     avg_window = max(1, avg_window - 10)
                     update_plot = True
-                # Toggle line visibility.
                 elif key == '1':
                     show_raw = not show_raw
                     update_plot = True
@@ -184,15 +171,12 @@ def main():
                 elif key == '4':
                     show_ra_anomalies = not show_ra_anomalies
                     update_plot = True
-                # Toggle plot style using hotkey '.'
                 elif key == '.':
                     plot_style = 'line' if plot_style == 'dots' else 'dots'
                     update_plot = True
-                # Toggle entire AD computation.
                 elif key == 'a':
                     compute_ad = not compute_ad
                     update_plot = True
-                # Hotkeys for raw signal AD adjustments:
                 elif key == 't':
                     anomaly_threshold += 1
                     update_plot = True
@@ -205,7 +189,6 @@ def main():
                 elif key == 'd':
                     anomaly_window_size = max(2, anomaly_window_size - 1)
                     update_plot = True
-                # Hotkeys for running average AD adjustments:
                 elif key == 'z':
                     ra_ad_window_size = max(2, ra_ad_window_size - 1)
                     update_plot = True
@@ -218,7 +201,6 @@ def main():
                 elif key == 'v':
                     ra_ad_threshold += 1
                     update_plot = True
-                # Save config hotkey.
                 elif key == 's':
                     config = {
                         "window_size": window_size,
@@ -250,12 +232,10 @@ def main():
                             offset = new_max_offset
                     last_max_offset = new_max_offset
 
-                    # Visible subset of data.
                     window_data = data[offset: offset + window_size]
                     x_vals = list(range(offset, offset + len(window_data)))
                     running_avg = compute_running_average(window_data, avg_window)
 
-                    # --- Raw Signal AD on Visible Window ---
                     raw_anomaly_x = []
                     raw_anomaly_y = []
                     if compute_ad and len(window_data) >= anomaly_window_size:
@@ -267,9 +247,7 @@ def main():
                                 if stdev_baseline > 0 and abs(window_data[i] - mean_baseline) > anomaly_threshold * stdev_baseline:
                                     raw_anomaly_x.append(offset + i)
                                     raw_anomaly_y.append(window_data[i])
-                    # -------------------------
 
-                    # --- Running Average AD on Visible Window ---
                     ra_anomaly_x = []
                     ra_anomaly_y = []
                     if compute_ad and len(running_avg) >= ra_ad_window_size:
@@ -281,9 +259,7 @@ def main():
                                 if stdev_baseline > 0 and abs(running_avg[i] - mean_baseline) > ra_ad_threshold * stdev_baseline:
                                     ra_anomaly_x.append(offset + i)
                                     ra_anomaly_y.append(running_avg[i])
-                    # -------------------------
 
-                    # Build the title with a top legend.
                     title_str = ("Moving Time Window Graph (" +
                               f"TW:{window_size}, AVG:{avg_window}, RTH:{anomaly_threshold}, RWND:{anomaly_window_size}, " +
                               f"RAT:{ra_ad_threshold}, RAWD:{ra_ad_window_size}, AD:{'ADON' if compute_ad else 'ADOF'}, " +
@@ -311,8 +287,7 @@ def main():
                     
                     plt.grid(True)
                     
-                    # Append the one-line hotkeys legend as a footer.
-                    plot_str = plt.build().rstrip("\n") + "\n" + legend_text()
+                    plot_str = plt.build().rstrip("\n") + "\n" + hotkeys_legend()
                 else:
                     plt.clear_figure()
                     plt.title("No data available in file")
