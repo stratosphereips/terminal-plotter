@@ -75,7 +75,7 @@ def main():
     args = parse_args()
     filename = args.file
 
-    # Load configuration from YAML (if available)
+    # Load configuration from YAML (if available) and use defaults.
     config = load_config()
     window_size         = config.get("window_size", args.window)
     avg_window          = config.get("avg_window", args.avg_window)
@@ -95,10 +95,6 @@ def main():
     offset = None
     last_max_offset = None
 
-    # Define the top-left legend for the plotted lines.
-    top_left_legend = "Legend: Data(CYN) | Avg(RED) | Raw AD(ORN) | RA AD(DGN)"
-    
-    # Set terminal to cbreak mode for immediate key reads.
     old_settings = termios.tcgetattr(sys.stdin)
     tty.setcbreak(sys.stdin.fileno())
     sys.stdout.write("\033[2J")
@@ -107,100 +103,80 @@ def main():
     last_update = time.time()
     update_plot = False
 
-    # Build hotkeys legend footer.
+    # Define the top-left legend (color legend for plotted lines).
+    top_left_legend = "Legend: Data(CYN) | Avg(RED) | Raw AD(ORN) | RA AD(DGN)"
+
+    # Build the title as a two-line string.
+    def build_title():
+        param_line = ("Moving Time Window Graph (TW:{} | AVG:{} | RTH:{} | RWND:{} | RAT:{} | RAWD:{} | AD:{} | Style:{})"
+                      .format(window_size, avg_window, anomaly_threshold, anomaly_window_size,
+                              ra_ad_threshold, ra_ad_window_size, "ADON" if compute_ad else "ADOF", plot_style))
+        return param_line + "\n" + top_left_legend
+
+    # Build the hotkeys legend for the footer.
     def hotkeys_legend():
         ad_state = "ADON" if compute_ad else "ADOF"
         return ("(SHFT:++ for big jumps) Hotkeys: k:WIN+ | j:WIN- | H:WIN++ | J:WIN-- | "
                 "h:LEFT | l:RGHT | r:AVG+ | f:AVG- | .:PLOT | a:" + ad_state + " | "
                 "t:RTH+ | g:RTH- | e:RAW+ | d:RAW- | z:RAWD- | x:RAWD+ | c:RAT- | v:RAT+ | "
                 "s:SAVE | 1:RAWL | 2:AVGL | 3:RADA | 4:RAAD | q:QUIT")
-    
+
     try:
         while True:
             key = get_key()
             if key:
                 if key == 'k':
-                    window_size += 1
-                    update_plot = True
+                    window_size += 1; update_plot = True
                 elif key == 'K':
-                    window_size += 100
-                    update_plot = True
+                    window_size += 100; update_plot = True
                 elif key == 'j':
-                    window_size = max(1, window_size - 1)
-                    update_plot = True
+                    window_size = max(1, window_size - 1); update_plot = True
                 elif key == 'J':
-                    window_size = max(1, window_size - 100)
-                    update_plot = True
+                    window_size = max(1, window_size - 100); update_plot = True
                 elif key == 'h':
-                    if offset is not None:
-                        offset = max(0, offset - window_size)
-                    update_plot = True
+                    if offset is not None: offset = max(0, offset - window_size); update_plot = True
                 elif key == 'H':
-                    if offset is not None:
-                        offset = max(0, offset - 100)
-                    update_plot = True
+                    if offset is not None: offset = max(0, offset - 100); update_plot = True
                 elif key == 'l':
-                    if offset is not None:
-                        offset += window_size
-                    update_plot = True
+                    if offset is not None: offset += window_size; update_plot = True
                 elif key == 'L':
-                    if offset is not None:
-                        offset += 100
-                    update_plot = True
+                    if offset is not None: offset += 100; update_plot = True
                 elif key == 'r':
-                    avg_window += 1
-                    update_plot = True
+                    avg_window += 1; update_plot = True
                 elif key == 'R':
-                    avg_window += 10
-                    update_plot = True
+                    avg_window += 10; update_plot = True
                 elif key == 'f':
-                    avg_window = max(1, avg_window - 1)
-                    update_plot = True
+                    avg_window = max(1, avg_window - 1); update_plot = True
                 elif key == 'F':
-                    avg_window = max(1, avg_window - 10)
-                    update_plot = True
+                    avg_window = max(1, avg_window - 10); update_plot = True
                 elif key == '1':
-                    show_raw = not show_raw
-                    update_plot = True
+                    show_raw = not show_raw; update_plot = True
                 elif key == '2':
-                    show_avg = not show_avg
-                    update_plot = True
+                    show_avg = not show_avg; update_plot = True
                 elif key == '3':
-                    show_anomalies = not show_anomalies
-                    update_plot = True
+                    show_anomalies = not show_anomalies; update_plot = True
                 elif key == '4':
-                    show_ra_anomalies = not show_ra_anomalies
-                    update_plot = True
+                    show_ra_anomalies = not show_ra_anomalies; update_plot = True
                 elif key == '.':
-                    plot_style = 'line' if plot_style == 'dots' else 'dots'
-                    update_plot = True
+                    plot_style = 'line' if plot_style == 'dots' else 'dots'; update_plot = True
                 elif key == 'a':
-                    compute_ad = not compute_ad
-                    update_plot = True
+                    compute_ad = not compute_ad; update_plot = True
                 elif key == 't':
-                    anomaly_threshold += 1
-                    update_plot = True
+                    anomaly_threshold += 1; update_plot = True
                 elif key == 'g':
-                    anomaly_threshold = max(1, anomaly_threshold - 1)
-                    update_plot = True
+                    anomaly_threshold = max(1, anomaly_threshold - 1); update_plot = True
                 elif key == 'e':
-                    anomaly_window_size += 1
-                    update_plot = True
+                    anomaly_window_size += 1; update_plot = True
                 elif key == 'd':
-                    anomaly_window_size = max(2, anomaly_window_size - 1)
-                    update_plot = True
+                    anomaly_window_size = max(2, anomaly_window_size - 1); update_plot = True
                 elif key == 'z':
-                    ra_ad_window_size = max(2, ra_ad_window_size - 1)
-                    update_plot = True
+                    ra_ad_window_size = max(2, ra_ad_window_size - 1); update_plot = True
                 elif key == 'x':
-                    ra_ad_window_size += 1
-                    update_plot = True
+                    ra_ad_window_size += 1; update_plot = True
                 elif key == 'c':
-                    ra_ad_threshold = max(1, ra_ad_threshold - 1)
-                    update_plot = True
+                    ra_ad_threshold = max(1, ra_ad_threshold - 1); update_plot = True
                 elif key == 'v':
-                    ra_ad_threshold += 1
-                    update_plot = True
+                    ra_ad_threshold += 1; update_plot = True
                 elif key == 's':
                     config = {
                         "window_size": window_size,
@@ -247,7 +223,7 @@ def main():
                                 if stdev_baseline > 0 and abs(window_data[i] - mean_baseline) > anomaly_threshold * stdev_baseline:
                                     raw_anomaly_x.append(offset + i)
                                     raw_anomaly_y.append(window_data[i])
-
+                    
                     ra_anomaly_x = []
                     ra_anomaly_y = []
                     if compute_ad and len(running_avg) >= ra_ad_window_size:
@@ -259,12 +235,8 @@ def main():
                                 if stdev_baseline > 0 and abs(running_avg[i] - mean_baseline) > ra_ad_threshold * stdev_baseline:
                                     ra_anomaly_x.append(offset + i)
                                     ra_anomaly_y.append(running_avg[i])
-
-                    title_str = ("Moving Time Window Graph (" +
-                              f"TW:{window_size}, AVG:{avg_window}, RTH:{anomaly_threshold}, RWND:{anomaly_window_size}, " +
-                              f"RAT:{ra_ad_threshold}, RAWD:{ra_ad_window_size}, AD:{'ADON' if compute_ad else 'ADOF'}, " +
-                              f"Style:{plot_style})\n" +
-                              top_left_legend)
+                    
+                    title_str = build_title()  # already includes top_left_legend
                     plt.clear_figure()
                     plt.title(title_str)
                     plt.xlabel("Index")
@@ -287,7 +259,8 @@ def main():
                     
                     plt.grid(True)
                     
-                    plot_str = plt.build().rstrip("\n") + "\n" + hotkeys_legend()
+                    built = plt.build().rstrip("\n")
+                    plot_str = "\n" * 2 + built + "\n" + hotkeys_legend() + "\n\n"
                 else:
                     plt.clear_figure()
                     plt.title("No data available in file")
