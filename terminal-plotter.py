@@ -6,7 +6,7 @@ import termios
 import argparse
 import plotext as plt
 import statistics  # For anomaly detection computations
-import yaml        # Requires PyYAML to be installed
+import yaml
 import os
 
 CONFIG_FILE = "config.yaml"
@@ -54,7 +54,8 @@ def compute_running_average(data, avg_window):
     for i in range(len(data)):
         start = max(0, i - avg_window + 1)
         window = data[start:i+1]
-        running_avg.append(sum(window) / len(window))
+        avg = sum(window) / len(window)
+        running_avg.append(avg)
     return running_avg
 
 def parse_args():
@@ -96,7 +97,9 @@ def main():
 
     old_settings = termios.tcgetattr(sys.stdin)
     tty.setcbreak(sys.stdin.fileno())
-    sys.stdout.write("\033[2J")
+
+    # Clear the entire screen once at startup.
+    sys.stdout.write("\033[2J\033[H")
     sys.stdout.flush()
 
     last_update = time.time()
@@ -104,14 +107,18 @@ def main():
 
     # Top legend for plotted lines.
     top_left_legend = "Legend: Data(CYN) | Avg(RED) | Raw AD(ORN) | RA AD(DGN)"
-    
-    # Build the title as a two-line string with extra newlines at the start for top margin.
+
+    # Build the title as a two-line string.
     def build_title():
+        # 1) parameter line
         param_line = ("Moving Time Window Graph (TW:{} | AVG:{} | RTH:{} | RWND:{} | RAT:{} | RAWD:{} | AD:{} | Style:{})"
-                      .format(window_size, avg_window, anomaly_threshold, anomaly_window_size,
-                              ra_ad_threshold, ra_ad_window_size, "ADON" if compute_ad else "ADOF", plot_style))
-        # Prepend extra newlines so the title is not covered.
-        return "\n\n" + param_line + "\n" + top_left_legend
+                      .format(window_size, avg_window, anomaly_threshold,
+                              anomaly_window_size, ra_ad_threshold,
+                              ra_ad_window_size,
+                              "ADON" if compute_ad else "ADOF",
+                              plot_style))
+        # 2) color legend line
+        return param_line + "\n" + top_left_legend
 
     # Build the hotkeys legend for the footer.
     def hotkeys_legend():
@@ -134,13 +141,21 @@ def main():
                 elif key == 'J':
                     window_size = max(1, window_size - 100); update_plot = True
                 elif key == 'h':
-                    if offset is not None: offset = max(0, offset - window_size); update_plot = True
+                    if offset is not None:
+                        offset = max(0, offset - window_size)
+                    update_plot = True
                 elif key == 'H':
-                    if offset is not None: offset = max(0, offset - 100); update_plot = True
+                    if offset is not None:
+                        offset = max(0, offset - 100)
+                    update_plot = True
                 elif key == 'l':
-                    if offset is not None: offset += window_size; update_plot = True
+                    if offset is not None:
+                        offset += window_size
+                    update_plot = True
                 elif key == 'L':
-                    if offset is not None: offset += 100; update_plot = True
+                    if offset is not None:
+                        offset += 100
+                    update_plot = True
                 elif key == 'r':
                     avg_window += 1; update_plot = True
                 elif key == 'R':
@@ -208,10 +223,12 @@ def main():
                             offset = new_max_offset
                     last_max_offset = new_max_offset
 
+                    # Build visible portion
                     window_data = data[offset: offset + window_size]
                     x_vals = list(range(offset, offset + len(window_data)))
                     running_avg = compute_running_average(window_data, avg_window)
 
+                    # Detect anomalies on the raw signal
                     raw_anomaly_x = []
                     raw_anomaly_y = []
                     if compute_ad and len(window_data) >= anomaly_window_size:
@@ -223,7 +240,8 @@ def main():
                                 if stdev_baseline > 0 and abs(window_data[i] - mean_baseline) > anomaly_threshold * stdev_baseline:
                                     raw_anomaly_x.append(offset + i)
                                     raw_anomaly_y.append(window_data[i])
-                    
+
+                    # Detect anomalies on the running average
                     ra_anomaly_x = []
                     ra_anomaly_y = []
                     if compute_ad and len(running_avg) >= ra_ad_window_size:
@@ -235,40 +253,55 @@ def main():
                                 if stdev_baseline > 0 and abs(running_avg[i] - mean_baseline) > ra_ad_threshold * stdev_baseline:
                                     ra_anomaly_x.append(offset + i)
                                     ra_anomaly_y.append(running_avg[i])
-                    
+
+                    # Construct the two-line title
                     title_str = build_title()
+
                     plt.clear_figure()
                     plt.title(title_str)
                     plt.xlabel("Index")
                     plt.ylabel("Value")
-                    
+
+                    # Plot raw data
                     if show_raw:
                         if plot_style == 'dots':
                             plt.plot(x_vals, window_data, marker="dot", color="cyan")
                         else:
                             plt.plot(x_vals, window_data, color="cyan")
+
+                    # Plot running average
                     if show_avg:
                         if plot_style == 'dots':
                             plt.plot(x_vals, running_avg, marker="dot", color="red")
                         else:
                             plt.plot(x_vals, running_avg, color="red")
+
+                    # Plot raw anomalies
                     if show_anomalies and raw_anomaly_x:
                         plt.scatter(raw_anomaly_x, raw_anomaly_y, color="orange", marker="■")
+
+                    # Plot running average anomalies
                     if show_ra_anomalies and ra_anomaly_x:
                         plt.scatter(ra_anomaly_x, ra_anomaly_y, color="dark_green", marker="●")
-                    
+
                     plt.grid(True)
-                    
-                    built = plt.build().rstrip("\n")
-                    plot_str = "\n" * 2 + built + "\n" + hotkeys_legend() + "\n\n"
+
+                    # Build final string with appended hotkeys legend
+                    built_plot = plt.build().rstrip("\n")
+                    final_str = built_plot + "\n" + hotkeys_legend() + "\n\n"
+
+                    # Clear screen, move cursor to top, and print
+                    sys.stdout.write("\033[2J\033[H")
+                    # Add additional newlines before printing so the top lines are visible
+                    sys.stdout.write("\n\n" + final_str)
+                    sys.stdout.flush()
+                
                 else:
                     plt.clear_figure()
                     plt.title("No data available in file")
-                    plot_str = plt.build()
-                
-                sys.stdout.write("\033[H")
-                sys.stdout.write(plot_str)
-                sys.stdout.flush()
+                    output = plt.build()
+                    sys.stdout.write("\033[2J\033[H" + output)
+                    sys.stdout.flush()
 
                 last_update = time.time()
                 update_plot = False
