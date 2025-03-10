@@ -75,7 +75,6 @@ def main():
     args = parse_args()
     filename = args.file
 
-    # Load configuration from YAML (if available) and use defaults.
     config = load_config()
     window_size         = config.get("window_size", args.window)
     avg_window          = config.get("avg_window", args.avg_window)
@@ -103,15 +102,16 @@ def main():
     last_update = time.time()
     update_plot = False
 
-    # Define the top-left legend (color legend for plotted lines).
+    # Top legend for plotted lines.
     top_left_legend = "Legend: Data(CYN) | Avg(RED) | Raw AD(ORN) | RA AD(DGN)"
-
-    # Build the title as a two-line string.
+    
+    # Build the title as a two-line string with extra newlines at the start for top margin.
     def build_title():
         param_line = ("Moving Time Window Graph (TW:{} | AVG:{} | RTH:{} | RWND:{} | RAT:{} | RAWD:{} | AD:{} | Style:{})"
                       .format(window_size, avg_window, anomaly_threshold, anomaly_window_size,
                               ra_ad_threshold, ra_ad_window_size, "ADON" if compute_ad else "ADOF", plot_style))
-        return param_line + "\n" + top_left_legend
+        # Prepend extra newlines so the title is not covered.
+        return "\n\n" + param_line + "\n" + top_left_legend
 
     # Build the hotkeys legend for the footer.
     def hotkeys_legend():
@@ -236,7 +236,7 @@ def main():
                                     ra_anomaly_x.append(offset + i)
                                     ra_anomaly_y.append(running_avg[i])
                     
-                    title_str = build_title()  # already includes top_left_legend
+                    title_str = build_title()
                     plt.clear_figure()
                     plt.title(title_str)
                     plt.xlabel("Index")
