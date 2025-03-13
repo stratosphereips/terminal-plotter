@@ -1,0 +1,12 @@
+anomaly_threshold: 3
+anomaly_window_size: 11
+avg_window: 5
+compute_ad: true
+plot_style: line
+ra_ad_threshold: 3
+ra_ad_window_size: 10
+show_anomalies: true
+show_avg: true
+show_ra_anomalies: true
+show_raw: true
+window_size: 800
