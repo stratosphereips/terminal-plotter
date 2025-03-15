@@ -161,9 +161,9 @@ def main():
                     compute_ad = not compute_ad
                     update_plot = True
                 elif key == 't':
-                    anomaly_threshold += 1; update_plot = True
+                    anomaly_threshold += 0.5; update_plot = True
                 elif key == 'g':
-                    anomaly_threshold = max(1, anomaly_threshold - 1); update_plot = True
+                    anomaly_threshold = max(1, anomaly_threshold - 0.5); update_plot = True
                 elif key == 'e':
                     anomaly_window_size += 1; update_plot = True
                 elif key == 'E':
@@ -181,9 +181,9 @@ def main():
                 elif key == 'X':
                     ra_ad_window_size += 10; update_plot = True
                 elif key == 'c':
-                    ra_ad_threshold = max(1, ra_ad_threshold - 1); update_plot = True
+                    ra_ad_threshold = max(1, ra_ad_threshold - 0.5); update_plot = True
                 elif key == 'v':
-                    ra_ad_threshold += 1; update_plot = True
+                    ra_ad_threshold += 0.5; update_plot = True
                 elif key == 's':
                     # Save to YAML
                     cfg = {
@@ -298,10 +298,13 @@ def main():
                         f"AvgW:{avg_window}(rR/fF)",
                         f"AvgADTH:{ra_ad_threshold} (cC/vV)",
                         f"AvgADW:{ra_ad_window_size} (zZ/xX)",
-                        f"AD:{'ADON' if compute_ad else 'ADOF'} (a)",
+                        f"AD:{'On' if compute_ad else 'Off'} (a)",
                         f"Style:{plot_style}(.)",
                         f"SaveConf (s)",
-                        f"Show Lines (1,2,3,4)",
+                        f"DataL: {'On' if show_raw else 'Off'} (1)",
+                        f"AvgL: {'On' if show_avg else 'Off'} (2)",
+                        f"DADL: {'On' if show_anomalies else 'Off'} (3)", 
+                        f"AvgADL: {'On' if show_ra_anomalies else 'Off'} (4)",
                     ]
 
                     if hasattr(plt, "legend"):
