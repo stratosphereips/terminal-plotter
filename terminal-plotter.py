@@ -277,24 +277,36 @@ def main():
                     # Plot raw data
                     if show_raw:
                         if plot_style == 'dots':
-                            plt.plot(x_vals, window_data, marker="dot", color="cyan")
+                            plt.plot(x_vals, window_data, marker="dot", color="cyan", label='Data')
                         else:
-                            plt.plot(x_vals, window_data, color="cyan")
+                            plt.plot(x_vals, window_data, color="cyan", label='Data')
 
                     # Plot running average
                     if show_avg:
                         if plot_style == 'dots':
-                            plt.plot(x_vals, running_avg, marker="dot", color="red")
+                            plt.plot(x_vals, running_avg, marker="dot", color="red", label=f"Running Avg (window: {avg_window})")
                         else:
-                            plt.plot(x_vals, running_avg, color="red")
+                            plt.plot(x_vals, running_avg, color="red", label=f"Running Avg (window: {avg_window})")
 
                     # Plot anomalies
                     if show_anomalies and raw_anomaly_x:
-                        plt.scatter(raw_anomaly_x, raw_anomaly_y, color="orange", marker="■")
+                        plt.scatter(raw_anomaly_x, raw_anomaly_y, color="orange", marker="■", label="Raw AD")
                     if show_ra_anomalies and ra_anomaly_x:
-                        plt.scatter(ra_anomaly_x, ra_anomaly_y, color="dark_green", marker="●")
+                        plt.scatter(ra_anomaly_x, ra_anomaly_y, color="dark_green", marker="●", label="RA AD")
 
                     plt.grid(True)
+
+                    legend_text = [
+                        f"TW Length: {window_size}",
+                        f"Avg window: {avg_window}",
+                        f"Plot Style: {plot_style}",
+                        f"Data: {'on' if show_raw else 'off'}",
+                        f"Running Avg: {'on' if show_avg else 'off'}"
+                    ]
+                    if hasattr(plt, "legend"):
+                        plt.legend(legend_text)
+                    else:
+                        plt.title("Moving Time Window Graph (" + ", ".join(legend_text) + ")")
 
                     ascii_chart = plt.build().rstrip("\n")
                     # **Push** the chart down ~N lines so top lines are in plain view
