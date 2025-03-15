@@ -117,7 +117,8 @@ def main():
             f"RAT:{ra_ad_threshold} | RAWD:{ra_ad_window_size} | "
             f"AD:{'ADON' if compute_ad else 'ADOF'} | Style:{plot_style})"
         )
-        return param_line + "\n" + color_legend
+        #return param_line + "\n" + color_legend
+        return param_line 
 
     def hotkeys_legend():
         """Single-line hotkeys footer."""
@@ -300,11 +301,11 @@ def main():
                     push_down_lines = 5  # increase if you need more top space
                     final_output = (
                         "\033[2J\033[H"        # Clear screen + cursor to top
-                        + ("\n" * push_down_lines)
+                        #+ ("\n" * push_down_lines)
                         + ascii_chart
-                        + "\n"
-                        + hotkeys_legend()
-                        + "\n"
+                        #+ "\n"
+                        #+ hotkeys_legend()
+                        #+ "\n"
                     )
 
                     sys.stdout.write(final_output)
