@@ -106,32 +106,6 @@ def main():
     sys.stdout.write("\033[2J\033[H")
     sys.stdout.flush()
 
-    # For top legend second line
-    color_legend = "Legend: Data(CYN) | Avg(RED) | Raw AD(ORN) | RA AD(DGN)"
-
-    def build_title():
-        """Two-line title: param line + color legend line."""
-        param_line = (
-            f"Moving Time Window Graph (TW:{window_size} | "
-            f"AVG:{avg_window} | RTH:{anomaly_threshold} | RWND:{anomaly_window_size} | "
-            f"RAT:{ra_ad_threshold} | RAWD:{ra_ad_window_size} | "
-            f"AD:{'ADON' if compute_ad else 'ADOF'} | Style:{plot_style})"
-        )
-        #return param_line + "\n" + color_legend
-        return param_line 
-
-    def hotkeys_legend():
-        """Single-line hotkeys footer."""
-        ad_state = "ADON" if compute_ad else "ADOF"
-        return (
-            "(SHFT:++ for big jumps) "
-            "Hotkeys: k:WIN+ | j:WIN- | H:WIN++ | J:WIN-- | "
-            "h:LEFT | l:RGHT | r:AVG+ | f:AVG- | .:PLOT | a:"
-            + ad_state
-            + " | t:RTH+ | g:RTH- | e:RAW+ | d:RAW- | z:RAWD- | x:RAWD+ | c:RAT- | v:RAT+ | "
-            "s:SAVE | 1:RAWL | 2:AVGL | 3:RADA | 4:RAAD | q:QUIT"
-        )
-
     last_update = time.time()
     update_plot = False
 
@@ -192,12 +166,20 @@ def main():
                     anomaly_threshold = max(1, anomaly_threshold - 1); update_plot = True
                 elif key == 'e':
                     anomaly_window_size += 1; update_plot = True
+                elif key == 'E':
+                    anomaly_window_size += 10; update_plot = True
                 elif key == 'd':
                     anomaly_window_size = max(2, anomaly_window_size - 1); update_plot = True
+                elif key == 'D':
+                    anomaly_window_size = max(2, anomaly_window_size - 10); update_plot = True
                 elif key == 'z':
                     ra_ad_window_size = max(2, ra_ad_window_size - 1); update_plot = True
+                elif key == 'Z':
+                    ra_ad_window_size = max(2, ra_ad_window_size - 10); update_plot = True
                 elif key == 'x':
                     ra_ad_window_size += 1; update_plot = True
+                elif key == 'X':
+                    ra_ad_window_size += 10; update_plot = True
                 elif key == 'c':
                     ra_ad_threshold = max(1, ra_ad_threshold - 1); update_plot = True
                 elif key == 'v':
@@ -270,7 +252,6 @@ def main():
                                     ra_anomaly_y.append(running_avg[i])
 
                     # Two-line title
-                    plt.title(build_title())
                     plt.xlabel("Index")
                     plt.ylabel("Value")
 
@@ -297,27 +278,43 @@ def main():
                     plt.grid(True)
 
                     legend_text = [
-                        f"TW Length: {window_size}",
+                        f"TW: {window_size}",
                         f"Avg window: {avg_window}",
                         f"Plot Style: {plot_style}",
                         f"Data: {'on' if show_raw else 'off'}",
-                        f"Running Avg: {'on' if show_avg else 'off'}"
+                        f"Running Avg: {'on' if show_avg else 'off'}",
                     ]
+                    '''
+                    return (
+                        + " | t:RTH+ | g:RTH- | e:RAW+ | d:RAW- | z:RAWD- | x:RAWD+ | c:RAT- | v:RAT+ | "
+                        "s:SAVE | 1:RAWL | 2:AVGL | 3:RADA | 4:RAAD | q:QUIT"
+                    )
+                    '''
+
+                    param_line = [
+                        f"DW:{window_size}(kK/jJ/h/l)", 
+                        f"DADTH:{anomaly_threshold} (tT/gG)",
+                        f"DADW:{anomaly_window_size} (eE/dD)",
+                        f"AvgW:{avg_window}(rR/fF)",
+                        f"AvgADTH:{ra_ad_threshold} (cC/vV)",
+                        f"AvgADW:{ra_ad_window_size} (zZ/xX)",
+                        f"AD:{'ADON' if compute_ad else 'ADOF'} (a)",
+                        f"Style:{plot_style}(.)",
+                        f"SaveConf (s)",
+                        f"Show Lines (1,2,3,4)",
+                    ]
+
                     if hasattr(plt, "legend"):
                         plt.legend(legend_text)
                     else:
-                        plt.title("Moving Time Window Graph (" + ", ".join(legend_text) + ")")
+                        plt.title(", ".join(param_line))
 
                     ascii_chart = plt.build().rstrip("\n")
                     # **Push** the chart down ~N lines so top lines are in plain view
-                    push_down_lines = 5  # increase if you need more top space
+                    #push_down_lines = 5  # increase if you need more top space
                     final_output = (
                         "\033[2J\033[H"        # Clear screen + cursor to top
-                        #+ ("\n" * push_down_lines)
                         + ascii_chart
-                        #+ "\n"
-                        #+ hotkeys_legend()
-                        #+ "\n"
                     )
 
                     sys.stdout.write(final_output)
