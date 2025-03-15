@@ -1,12 +1,12 @@
-anomaly_threshold: 3
-anomaly_window_size: 15
+anomaly_threshold: 10
+anomaly_window_size: 300
 avg_window: 30
 compute_ad: true
 plot_style: line
-ra_ad_threshold: 4
-ra_ad_window_size: 15
+ra_ad_threshold: 7
+ra_ad_window_size: 300
 show_anomalies: false
 show_avg: true
 show_ra_anomalies: true
 show_raw: false
-window_size: 1000
+window_size: 2000
