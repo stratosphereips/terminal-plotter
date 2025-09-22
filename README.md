@@ -50,7 +50,7 @@ The legend in the plot updates with the current settings (e.g., TW length, runni
 ## Usage
 Run the script from your terminal. It supports several command-line options:
 
-`python a.py [--window WINDOW] [--file FILE] [--interval INTERVAL] [--avg-window AVG_WINDOW]`
+`python terminal-plotter.py [--window WINDOW] [--file FILE] [--interval INTERVAL] [--avg-window AVG_WINDOW]`
 
 
 ## Command-line Options
@@ -94,7 +94,7 @@ Time Window Adjustments:
 ### Run the script
 First, Run the script with a 20-point window, reading from mydata.txt, and updating every 1.5 seconds:
 
-  `python a.py --window 20 --file mydata.txt --interval 1.5 --avg-window 5`
+  `python terminal-plotter.py --window 20 --file mydata.txt --interval 1.5 --avg-window 5`
 
 
 
